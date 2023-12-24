@@ -21,7 +21,7 @@ session in your library or CLI code and can be used for running commands:
 the settings you want.
 
 [`Shell`]: https://docs.rs/sprint/latest/sprint/struct.Shell.html
-[`Shell:run`]: https://docs.rs/sprint/latest/sprint/struct.Shell.html#method.run
+[`Shell::run`]: https://docs.rs/sprint/latest/sprint/struct.Shell.html#method.run
 [`Shell::run_check`]: https://docs.rs/sprint/latest/sprint/struct.Shell.html#method.run_check
 [`Shell::pipe`]: https://docs.rs/sprint/latest/sprint/struct.Shell.html#method.pipe
 [`Shell::pipe_with`]: https://docs.rs/sprint/latest/sprint/struct.Shell.html#method.pipe_with
