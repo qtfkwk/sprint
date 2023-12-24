@@ -20,6 +20,13 @@ session in your library or CLI code and can be used for running commands:
 [create a custom shell](#customize) or [modify an existing shell](#modify) with
 the settings you want.
 
+[`Shell`]: https://docs.rs/sprint/latest/sprint/struct.Shell.html
+[`Shell:run`]: https://docs.rs/sprint/latest/sprint/struct.Shell.html#method.run
+[`Shell::run_check`]: https://docs.rs/sprint/latest/sprint/struct.Shell.html#method.run_check
+[`Shell::pipe`]: https://docs.rs/sprint/latest/sprint/struct.Shell.html#method.pipe
+[`Shell::pipe_with`]: https://docs.rs/sprint/latest/sprint/struct.Shell.html#method.pipe_with
+[`Shell::pipe_with1`]: https://docs.rs/sprint/latest/sprint/struct.Shell.html#method.pipe_with1
+
 # Examples
 
 ## Run command(s) and show the output
