@@ -1,13 +1,12 @@
 #![doc = include_str!("../README.md")]
 
-use anyhow::{anyhow, Result};
+//--------------------------------------------------------------------------------------------------
+
 use bunt::termcolor::{ColorChoice, ColorSpec, StandardStream, WriteColor};
 use rayon::prelude::*;
 use std::io::{Read, Write};
 
-macro_rules! error {
-    ($($x:tt)*) => { Err(anyhow!(format!($($x)*))) };
-}
+//--------------------------------------------------------------------------------------------------
 
 macro_rules! cprint {
     ($color:expr, $($x:tt)*) => {
@@ -28,6 +27,25 @@ macro_rules! cprintln {
     };
 }
 
+//--------------------------------------------------------------------------------------------------
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub enum Pipe {
+    #[default]
+    Null,
+    Stdout,
+    Stderr,
+    String(String),
+}
+
+impl Pipe {
+    pub fn string() -> Pipe {
+        Pipe::String(String::new())
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+
 /**
 Command runner
 
@@ -43,19 +61,14 @@ let shell = Shell::default();
 // Or a custom configuration:
 
 let shell = Shell {
-    // Common options
-
-    // Shell
     shell: Some(String::from("sh -c")),
     //shell: Some(String::from("bash -c")), // Use bash
     //shell: Some(String::from("bash -xeo pipefail -c")), // Use bash w/ options
     //shell: None, // Run directly instead of a shell
 
-    // ---
-
-    // Options for run, run_check
-
-    // Print extra content
+    dry_run: false,
+    sync: true,
+    print: true,
 
     fence: String::from("```"),
     info: String::from("text"),
@@ -65,20 +78,6 @@ let shell = Shell {
     info_color: bunt::style!("#555555"),
     prompt_color: bunt::style!("#555555"),
     command_color: bunt::style!("#00ffff+bold"),
-
-    print: true,
-
-    // Don't run command(s)
-    dry_run: false,
-    //dry_run: true,
-
-    // ---
-
-    // Options for pipe, pipe_with
-
-    // Run commands synchronously
-    sync: true,
-    //sync: false,
 };
 
 // Or modify it on the fly:
@@ -91,9 +90,13 @@ shell.sync = false;
 // ...
 ```
 */
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Shell {
     pub shell: Option<String>,
+
+    pub dry_run: bool,
+    pub sync: bool,
+    pub print: bool,
 
     pub fence: String,
     pub info: String,
@@ -103,10 +106,6 @@ pub struct Shell {
     pub info_color: ColorSpec,
     pub prompt_color: ColorSpec,
     pub command_color: ColorSpec,
-
-    pub print: bool,
-    pub dry_run: bool,
-    pub sync: bool,
 }
 
 impl Default for Shell {
@@ -117,6 +116,10 @@ impl Default for Shell {
         Shell {
             shell: Some(String::from("sh -c")),
 
+            dry_run: false,
+            sync: true,
+            print: true,
+
             fence: String::from("```"),
             info: String::from("text"),
             prompt: String::from("$ "),
@@ -125,207 +128,110 @@ impl Default for Shell {
             info_color: bunt::style!("#555555"),
             prompt_color: bunt::style!("#555555"),
             command_color: bunt::style!("#00ffff+bold"),
-
-            print: true,
-            dry_run: false,
-            sync: true,
         }
     }
 }
 
 impl Shell {
     /**
-    Run command(s) and print the output
-
-    Shorthand for [`run_check`][`Shell::run_check`] to run command(s) expecting an exit code of 0.
+    Run command(s)
     */
-    pub fn run(&self, commands: &[&str]) -> Result<()> {
-        let zero = [0].into_iter().collect::<Vec<i32>>();
-        self.run_check(
-            &commands
-                .iter()
-                .map(|x| (*x, zero.as_slice()))
-                .collect::<Vec<_>>(),
-        )
-    }
-
-    /**
-    Run command(s) and print the output and check exit code(s)
-
-    * Customize the `fence`, `info`, and `prompt` string properties as desired.
-    * The `sync` property is not used.
-
-    | `print` | `dry_run` | Description                                                            |
-    |---------|-----------|------------------------------------------------------------------------|
-    | true    | false     | This is the default. Print markdown code block and run command(s).     |
-    | true    | true      | This is a dry run. Print markdown code block but don't run command(s). |
-    | false   | false     | Don't print markdown code block but run command(s).                    |
-    | false   | true      | This is a *null operation*; it doesn't print or run anything.          |
-    */
-    pub fn run_check(&self, commands: &[(&str, &[i32])]) -> Result<()> {
-        // Print the starting fence and info string
-        if self.print {
-            cprint!(&self.fence_color, "{}", self.fence);
-            cprintln!(&self.info_color, "{}", self.info);
-        }
-
-        // Iterate commands
-        for (i, (command, codes)) in commands.iter().enumerate() {
-            if i > 0 && self.print && !self.dry_run {
-                bunt::println!("");
-            }
-
-            // Print the prompt and/or command
-            if self.print {
-                if !self.dry_run {
-                    cprint!(&self.prompt_color, "{}", self.prompt);
-                }
-                cprintln!(
-                    &self.command_color,
-                    "{}",
-                    command
-                        .replace(" && ", " \\\n&& ")
-                        .replace(" || ", " \\\n|| ")
-                        .replace("; ", " \\\n; "),
-                );
-            }
-
-            // Run the command
-            if !self.dry_run {
-                let (prog, args) = self.prepare(command);
-                match std::process::Command::new(prog)
-                    .args(&args)
-                    .spawn()
-                    .unwrap()
-                    .wait()
-                    .unwrap()
-                    .code()
-                {
-                    Some(code) => {
-                        if !codes.is_empty() && !codes.contains(&code) {
-                            return error!("The command `{command}` exited with code {code}!");
-                        }
-                    }
-                    None => {
-                        return error!("The command `{command}` was terminated by a signal!");
-                    }
-                }
-            }
-        }
-
-        // Print the ending fence
-        if self.print {
-            cprintln!(&self.fence_color, "{}\n", self.fence);
-        }
-
-        Ok(())
-    }
-
-    /**
-    Run command(s) and return the output
-
-    Shorthand to run command(s) that don't have stdin.
-    See [`pipe_with`][`Shell::pipe_with`] or [`pipe_with1`][`Shell::pipe_with1`] for running
-    command(s) that have stdin.
-
-    ```
-    use sprint::*;
-
-    let shell = Shell::default();
-
-    let commands = vec!["ls", "ls -l"];
-
-    commands
-        .iter()
-        .zip(shell.pipe(&commands))
-        .for_each(|(command, (stdout, stderr, code))| {
-            // ...
-        });
-    ```
-    */
-    pub fn pipe(&self, commands: &[&str]) -> Vec<(String, String, Option<i32>)> {
-        self.pipe_with(&commands.iter().map(|x| (*x, None)).collect::<Vec<_>>())
-    }
-
-    /**
-    Run command(s) with optional stdin and return the output
-
-    | `sync` | Description                                                                                       |
-    |--------|---------------------------------------------------------------------------------------------------|
-    | true   | Run command(s) sequentially. This is the default.                                                 |
-    | false  | Run command(s) asynchronously via [`par_iter`][`rayon::iter::IntoParallelRefIterator::par_iter`]. |
-
-    ```
-    use sprint::*;
-
-    let shell = Shell::default();
-
-    let commands = vec![("ls", None), ("ls -l", None)];
-
-    commands
-        .iter()
-        .zip(shell.pipe_with(&commands))
-        .for_each(|(command, (stdout, stderr, code))| {
-            // ...
-        });
-    ```
-    */
-    pub fn pipe_with(
-        &self,
-        commands: &[(&str, Option<&str>)],
-    ) -> Vec<(String, String, Option<i32>)> {
+    pub fn run(&self, commands: &[Command]) -> Vec<Command> {
         if self.sync {
-            commands
+            if self.print {
+                cprint!(&self.fence_color, "{}", self.fence);
+                cprintln!(&self.info_color, "{}", self.info);
+            }
+
+            let r = commands
                 .iter()
-                .map(|(command, stdin)| self.pipe_with1(command, *stdin))
-                .collect()
+                .enumerate()
+                .map(|(i, command)| {
+                    if i > 0 && self.print && !self.dry_run {
+                        bunt::println!("");
+                    }
+
+                    self.run1(command)
+                })
+                .collect();
+
+            if self.print {
+                cprintln!(&self.fence_color, "{}\n", self.fence);
+            }
+
+            r
         } else {
             commands
                 .par_iter()
-                .map(|(command, stdin)| self.pipe_with1(command, *stdin))
+                .map(|command| self.run1(command))
                 .collect()
         }
     }
 
-    /**
-    Run a single command with optional stdin and return the output
+    pub fn run1(&self, command: &Command) -> Command {
+        if self.print {
+            if !self.dry_run {
+                cprint!(&self.prompt_color, "{}", self.prompt);
+            }
+            cprintln!(
+                &self.command_color,
+                "{}",
+                command
+                    .command
+                    .replace(" && ", " \\\n&& ")
+                    .replace(" || ", " \\\n|| ")
+                    .replace("; ", " \\\n; "),
+            );
+        }
 
-    ```
-    use sprint::*;
+        if self.dry_run {
+            return command.clone();
+        }
 
-    let shell = Shell::default();
+        let (prog, args) = self.prepare(&command.command);
 
-    let (stdout, stderr, code) = shell.pipe_with1("ls", None);
-    ```
-    */
-    pub fn pipe_with1(&self, command: &str, stdin: Option<&str>) -> (String, String, Option<i32>) {
-        let (prog, args) = self.prepare(command);
+        let mut cmd = std::process::Command::new(prog);
+        cmd.args(&args);
 
-        let mut child = std::process::Command::new(prog)
-            .args(&args)
-            .stdin(std::process::Stdio::piped())
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped())
-            .spawn()
-            .unwrap();
+        if matches!(command.stdin, Pipe::String(_)) {
+            cmd.stdin(std::process::Stdio::piped());
+        }
 
-        if let Some(s) = stdin {
+        if matches!(command.stdout, Some(Pipe::String(_) | Pipe::Null)) {
+            cmd.stdout(std::process::Stdio::piped());
+        }
+
+        if matches!(command.stderr, Some(Pipe::String(_) | Pipe::Null)) {
+            cmd.stderr(std::process::Stdio::piped());
+        }
+
+        let mut child = cmd.spawn().unwrap();
+
+        if let Pipe::String(s) = &command.stdin {
             let mut stdin = child.stdin.take().unwrap();
             stdin.write_all(s.as_bytes()).unwrap();
         }
 
-        let code = match child.wait() {
+        let mut r = command.clone();
+
+        r.code = match child.wait() {
             Ok(status) => status.code(),
             Err(_e) => None,
         };
 
-        let mut stdout = String::new();
-        child.stdout.unwrap().read_to_string(&mut stdout).unwrap();
+        if matches!(command.stdout, Some(Pipe::String(_))) {
+            let mut stdout = String::new();
+            child.stdout.unwrap().read_to_string(&mut stdout).unwrap();
+            r.stdout = Some(Pipe::String(stdout));
+        }
 
-        let mut stderr = String::new();
-        child.stderr.unwrap().read_to_string(&mut stderr).unwrap();
+        if matches!(command.stderr, Some(Pipe::String(_))) {
+            let mut stderr = String::new();
+            child.stderr.unwrap().read_to_string(&mut stderr).unwrap();
+            r.stderr = Some(Pipe::String(stderr));
+        }
 
-        (stdout, stderr, code)
+        r
     }
 
     /**
@@ -342,6 +248,28 @@ impl Shell {
             let mut args = shlex::split(command).unwrap();
             let prog = args.remove(0);
             (prog, args)
+        }
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Command {
+    pub command: String,
+    pub stdin: Pipe,
+    pub codes: Vec<i32>,
+
+    pub stdout: Option<Pipe>,
+    pub stderr: Option<Pipe>,
+    pub code: Option<i32>,
+}
+
+impl Command {
+    pub fn new(command: &str) -> Command {
+        Command {
+            command: command.to_string(),
+            ..Default::default()
         }
     }
 }

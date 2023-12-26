@@ -1,13 +1,12 @@
 [package]
 name = "sprint"
-version = "0.1.2"
+version = "0.2.0"
 edition = "2021"
 description = "Command runner"
 repository = "https://github.com/qtfkwk/sprint"
 license = "MIT"
 
 [dependencies]
-anyhow = "1.0.76"
 bunt = "0.2.8"
 rayon = "1.8.0"
 shlex = "1.2.0"
