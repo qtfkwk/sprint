@@ -75,6 +75,7 @@ let shell = Shell {
     info_color: bunt::style!("#555555"),
     prompt_color: bunt::style!("#555555"),
     command_color: bunt::style!("#00ffff+bold"),
+    error_color: bunt::style!("#ff0000+bold+italic"),
 };
 
 shell.run(&[Command::new("ls"), Command::new("ls -l")]);

@@ -24,6 +24,7 @@ fn manual() {
         info_color: bunt::style!("#555555"),
         prompt_color: bunt::style!("#555555"),
         command_color: bunt::style!("#00ffff+bold"),
+        error_color: bunt::style!("#ff0000+bold+italic"),
     };
 
     shell.run(&[Command::new("ls *"), Command::new("ls -l")]);
@@ -46,6 +47,7 @@ fn custom() {
         info_color: bunt::style!("#ff0000+italic"),
         prompt_color: bunt::style!("#00ff00"),
         command_color: bunt::style!("#ff00ff+bold"),
+        error_color: bunt::style!("#00ff00+bold+italic"),
     };
 
     shell.run(&[Command::new("ls *"), Command::new("ls -l")]);
@@ -68,6 +70,7 @@ fn direct() {
         info_color: bunt::style!("#555555"),
         prompt_color: bunt::style!("#555555"),
         command_color: bunt::style!("#00ffff+bold"),
+        error_color: bunt::style!("#ff0000+bold+italic"),
     };
 
     shell.run(&[

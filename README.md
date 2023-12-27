@@ -75,6 +75,7 @@ let shell = Shell {
     info_color: bunt::style!("#555555"),
     prompt_color: bunt::style!("#555555"),
     command_color: bunt::style!("#00ffff+bold"),
+    error_color: bunt::style!("#ff0000+bold+italic"),
 };
 
 shell.run(&[Command::new("ls"), Command::new("ls -l")]);
@@ -102,4 +103,5 @@ shell.run(&[Command::new("ls"), Command::new("ls -l")]);
     * 0.1.1 (2023-12-24): Fix readme
     * 0.1.2 (2023-12-24): Fix readme
 * 0.2.0 (2023-12-26): Redesign; update dependencies
+* 0.3.0 (2023-12-27): Add error handling
 

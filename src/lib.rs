@@ -78,6 +78,7 @@ let shell = Shell {
     info_color: bunt::style!("#555555"),
     prompt_color: bunt::style!("#555555"),
     command_color: bunt::style!("#00ffff+bold"),
+    error_color: bunt::style!("#ff0000+bold+italic"),
 };
 
 // Or modify it on the fly:
@@ -106,6 +107,7 @@ pub struct Shell {
     pub info_color: ColorSpec,
     pub prompt_color: ColorSpec,
     pub command_color: ColorSpec,
+    pub error_color: ColorSpec,
 }
 
 impl Default for Shell {
@@ -128,6 +130,7 @@ impl Default for Shell {
             info_color: bunt::style!("#555555"),
             prompt_color: bunt::style!("#555555"),
             command_color: bunt::style!("#00ffff+bold"),
+            error_color: bunt::style!("#ff0000+bold+italic"),
         }
     }
 }
@@ -143,20 +146,36 @@ impl Shell {
                 cprintln!(&self.info_color, "{}", self.info);
             }
 
-            let r = commands
-                .iter()
-                .enumerate()
-                .map(|(i, command)| {
-                    if i > 0 && self.print && !self.dry_run {
-                        bunt::println!("");
-                    }
+            let mut r = vec![];
+            let mut error = None;
 
-                    self.run1(command)
-                })
-                .collect();
+            for (i, command) in commands.iter().enumerate() {
+                if i > 0 && self.print && !self.dry_run {
+                    bunt::println!("");
+                }
+
+                let command = self.run1(command);
+
+                if let Some(code) = &command.code {
+                    if !command.codes.contains(code) {
+                        error = Some(format!(
+                            "Command `{}` exited with invalid code: `{:?}` (Valid: `{:?}`)!",
+                            command.command, command.code, command.codes,
+                        ));
+                        r.push(command);
+                        break;
+                    }
+                }
+
+                r.push(command);
+            }
 
             if self.print {
                 cprintln!(&self.fence_color, "{}\n", self.fence);
+
+                if let Some(error) = error {
+                    cprintln!(&self.error_color, "{}\n", error);
+                }
             }
 
             r
@@ -254,7 +273,7 @@ impl Shell {
 
 //--------------------------------------------------------------------------------------------------
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Command {
     pub command: String,
     pub stdin: Pipe,
@@ -263,6 +282,19 @@ pub struct Command {
     pub stdout: Option<Pipe>,
     pub stderr: Option<Pipe>,
     pub code: Option<i32>,
+}
+
+impl Default for Command {
+    fn default() -> Command {
+        Command {
+            command: Default::default(),
+            stdin: Default::default(),
+            codes: vec![0],
+            stdout: Default::default(),
+            stderr: Default::default(),
+            code: Default::default(),
+        }
+    }
 }
 
 impl Command {
