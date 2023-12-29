@@ -5,4 +5,5 @@
     * 0.1.2 (2023-12-24): Fix readme
 * 0.2.0 (2023-12-26): Redesign; update dependencies
 * 0.3.0 (2023-12-27): Add error handling
+* 0.4.0 (2023-12-29): Fix error handling
 

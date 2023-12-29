@@ -87,7 +87,7 @@ fn direct() {
 }
 
 #[test]
-fn pipe() {
+fn pipe_manual() {
     assert_eq!(
         Shell {
             print: false,
@@ -95,12 +95,12 @@ fn pipe() {
         }
         .run(&[Command {
             command: String::from("ls"),
-            stdout: Some(Pipe::string()),
+            stdout: Pipe::string(),
             codes: vec![0],
             ..Default::default()
         }])[0]
             .stdout,
-        Some(Pipe::String(String::from(
+        Pipe::String(Some(String::from(
             "\
 Cargo.lock
 Cargo.toml
@@ -114,5 +114,24 @@ tests
 \
             "
         ))),
+    );
+}
+
+#[test]
+fn pipe1() {
+    assert_eq!(
+        Shell::default().pipe1("ls"),
+        "\
+Cargo.lock
+Cargo.toml
+CHANGELOG.md
+Makefile.md
+README.md
+src
+t
+target
+tests
+\
+        "
     );
 }

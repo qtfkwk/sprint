@@ -33,14 +33,14 @@ let shell = Shell::default();
 
 let results = shell.run(&[Command {
     command: String::from("ls"),
-    stdout: Some(Pipe::string()),
+    stdout: Pipe::string(),
     codes: vec![0],
     ..Default::default()
 }]);
 
 assert_eq!(
     results[0].stdout,
-    Some(Pipe::String(String::from("\
+    Pipe::String(Some(String::from("\
 Cargo.lock
 Cargo.toml
 CHANGELOG.md
@@ -104,4 +104,5 @@ shell.run(&[Command::new("ls"), Command::new("ls -l")]);
     * 0.1.2 (2023-12-24): Fix readme
 * 0.2.0 (2023-12-26): Redesign; update dependencies
 * 0.3.0 (2023-12-27): Add error handling
+* 0.4.0 (2023-12-29): Fix error handling
 

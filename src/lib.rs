@@ -14,6 +14,7 @@ macro_rules! cprint {
         stdout.set_color($color).unwrap();
         write!(&mut stdout, $($x)*).unwrap();
         stdout.reset().unwrap();
+        stdout.flush().unwrap();
     };
 }
 
@@ -24,23 +25,23 @@ macro_rules! cprintln {
         write!(&mut stdout, $($x)*).unwrap();
         stdout.reset().unwrap();
         writeln!(&mut stdout).unwrap();
+        stdout.flush().unwrap();
     };
 }
 
 //--------------------------------------------------------------------------------------------------
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Pipe {
-    #[default]
     Null,
     Stdout,
     Stderr,
-    String(String),
+    String(Option<String>),
 }
 
 impl Pipe {
     pub fn string() -> Pipe {
-        Pipe::String(String::new())
+        Pipe::String(None)
     }
 }
 
@@ -154,20 +155,27 @@ impl Shell {
                     bunt::println!("");
                 }
 
-                let command = self.run1(command);
+                let result = self.run1(command);
 
-                if let Some(code) = &command.code {
-                    if !command.codes.contains(code) {
+                if let Some(code) = &result.code {
+                    if !result.codes.contains(code) {
                         error = Some(format!(
-                            "Command `{}` exited with invalid code: `{:?}` (Valid: `{:?}`)!",
-                            command.command, command.code, command.codes,
+                            "**Command `{}` exited with code: `{code}`!**",
+                            result.command,
                         ));
-                        r.push(command);
-                        break;
                     }
+                } else if !self.dry_run {
+                    error = Some(format!(
+                        "**Command `{}` was killed by a signal!**",
+                        result.command,
+                    ));
                 }
 
-                r.push(command);
+                r.push(result);
+
+                if error.is_some() {
+                    break;
+                }
             }
 
             if self.print {
@@ -199,7 +207,7 @@ impl Shell {
                     .command
                     .replace(" && ", " \\\n&& ")
                     .replace(" || ", " \\\n|| ")
-                    .replace("; ", " \\\n; "),
+                    .replace("; ", "; \\\n"),
             );
         }
 
@@ -207,6 +215,26 @@ impl Shell {
             return command.clone();
         }
 
+        self.core(command)
+    }
+
+    pub fn pipe1(&self, command: &str) -> String {
+        let command = Command {
+            command: command.to_string(),
+            stdout: Pipe::string(),
+            ..Default::default()
+        };
+
+        let result = self.core(&command);
+
+        if let Pipe::String(Some(stdout)) = &result.stdout {
+            stdout.to_string()
+        } else {
+            String::new()
+        }
+    }
+
+    pub fn core(&self, command: &Command) -> Command {
         let (prog, args) = self.prepare(&command.command);
 
         let mut cmd = std::process::Command::new(prog);
@@ -216,17 +244,17 @@ impl Shell {
             cmd.stdin(std::process::Stdio::piped());
         }
 
-        if matches!(command.stdout, Some(Pipe::String(_) | Pipe::Null)) {
+        if matches!(command.stdout, Pipe::String(_) | Pipe::Null) {
             cmd.stdout(std::process::Stdio::piped());
         }
 
-        if matches!(command.stderr, Some(Pipe::String(_) | Pipe::Null)) {
+        if matches!(command.stderr, Pipe::String(_) | Pipe::Null) {
             cmd.stderr(std::process::Stdio::piped());
         }
 
         let mut child = cmd.spawn().unwrap();
 
-        if let Pipe::String(s) = &command.stdin {
+        if let Pipe::String(Some(s)) = &command.stdin {
             let mut stdin = child.stdin.take().unwrap();
             stdin.write_all(s.as_bytes()).unwrap();
         }
@@ -238,16 +266,16 @@ impl Shell {
             Err(_e) => None,
         };
 
-        if matches!(command.stdout, Some(Pipe::String(_))) {
+        if matches!(command.stdout, Pipe::String(_)) {
             let mut stdout = String::new();
             child.stdout.unwrap().read_to_string(&mut stdout).unwrap();
-            r.stdout = Some(Pipe::String(stdout));
+            r.stdout = Pipe::String(Some(stdout));
         }
 
-        if matches!(command.stderr, Some(Pipe::String(_))) {
+        if matches!(command.stderr, Pipe::String(_)) {
             let mut stderr = String::new();
             child.stderr.unwrap().read_to_string(&mut stderr).unwrap();
-            r.stderr = Some(Pipe::String(stderr));
+            r.stderr = Pipe::String(Some(stderr));
         }
 
         r
@@ -278,9 +306,8 @@ pub struct Command {
     pub command: String,
     pub stdin: Pipe,
     pub codes: Vec<i32>,
-
-    pub stdout: Option<Pipe>,
-    pub stderr: Option<Pipe>,
+    pub stdout: Pipe,
+    pub stderr: Pipe,
     pub code: Option<i32>,
 }
 
@@ -288,10 +315,10 @@ impl Default for Command {
     fn default() -> Command {
         Command {
             command: Default::default(),
-            stdin: Default::default(),
+            stdin: Pipe::Null,
             codes: vec![0],
-            stdout: Default::default(),
-            stderr: Default::default(),
+            stdout: Pipe::Stdout,
+            stderr: Pipe::Stderr,
             code: Default::default(),
         }
     }

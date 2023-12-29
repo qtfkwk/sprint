@@ -33,14 +33,14 @@ let shell = Shell::default();
 
 let results = shell.run(&[Command {
     command: String::from("ls"),
-    stdout: Some(Pipe::string()),
+    stdout: Pipe::string(),
     codes: vec![0],
     ..Default::default()
 }]);
 
 assert_eq!(
     results[0].stdout,
-    Some(Pipe::String(String::from("\\
+    Pipe::String(Some(String::from("\\
 Cargo.lock
 Cargo.toml
 CHANGELOG.md
