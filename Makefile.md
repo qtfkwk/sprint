@@ -29,7 +29,7 @@ cargo clippy -- -D clippy::all
 # test
 
 ```
-cargo test -- --test-threads=1
+cargo test -- --nocapture --test-threads=1
 ```
 
 # check
@@ -48,6 +48,7 @@ cargo update
 
 # install
 
+* build
 * `README.md`
 
 ```

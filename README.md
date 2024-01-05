@@ -3,8 +3,8 @@
 The `sprint` crate provides the [`Shell`] struct which represents a shell
 session in your library or CLI code and can be used for running commands:
 
-* [Run command(s) and show the output](#run-commands-and-show-the-output)
-* [Run command(s) and return the output](#run-commands-and-return-the-output)
+* [Show the output](#run-commands-and-show-the-output)
+* [Return the output](#run-commands-and-return-the-output)
 
 [`Shell`] exposes its properties so you can easily
 [create a custom shell](#customize) or [modify an existing shell](#modify) with
@@ -12,7 +12,58 @@ the settings you want.
 
 [`Shell`]: https://docs.rs/sprint/latest/sprint/struct.Shell.html
 
-# Examples
+---
+
+The `sprint` crate also provides the `sprint` CLI which provides an easy way to
+use the library directly from the command line in two modes:
+
+* [Run command(s) given as arguments](#run-commands-given-as-arguments)
+* [Run interactively](#run-interactively)
+
+# CLI examples
+
+```text
+$ sprint -h
+Command runner
+
+Usage: sprint [OPTIONS] [STRING]...
+
+Arguments:
+  [STRING]...  File(s) or command(s)
+
+Options:
+  -s <STRING>      Shell [default: "sh -c"]
+  -f <STRING>      Fence [default: ```]
+  -i <STRING>      Info [default: text]
+  -p <STRING>      Prompt [default: "$ "]
+  -h, --help       Print help
+  -V, --version    Print version
+```
+
+## Run command(s) given as arguments
+
+~~~text
+$ sprint 'ls'
+```text
+$ ls
+Cargo.lock
+Cargo.toml
+CHANGELOG.md
+Makefile.md
+README.md
+src
+t
+target
+tests
+```
+
+~~~
+
+## Run interactively
+
+![](t/interactive.png)
+
+# Library examples
 
 ## Run command(s) and show the output
 
@@ -22,6 +73,9 @@ use sprint::*;
 let shell = Shell::default();
 
 shell.run(&[Command::new("ls"), Command::new("ls -l")]);
+
+// or equivalently:
+//shell.run_str(&["ls", "ls -l"]);
 ~~~
 
 ## Run command(s) and return the output
@@ -105,4 +159,5 @@ shell.run(&[Command::new("ls"), Command::new("ls -l")]);
 * 0.2.0 (2023-12-26): Redesign; update dependencies
 * 0.3.0 (2023-12-27): Add error handling
 * 0.4.0 (2023-12-29): Fix error handling
+* 0.5.0 (2024-01-05): Add CLI; update dependencies
 

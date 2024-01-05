@@ -1,16 +1,138 @@
-#![doc = include_str!("../README.md")]
+/*!
+# About
+
+The `sprint` crate provides the [`Shell`] struct which represents a shell
+session in your library or CLI code and can be used for running commands:
+
+* [Show the output](#run-commands-and-show-the-output)
+* [Return the output](#run-commands-and-return-the-output)
+
+[`Shell`] exposes its properties so you can easily
+[create a custom shell](#customize) or [modify an existing shell](#modify) with
+the settings you want.
+
+[`Shell`]: https://docs.rs/sprint/latest/sprint/struct.Shell.html
+
+# Examples
+
+## Run command(s) and show the output
+
+~~~rust
+use sprint::*;
+
+let shell = Shell::default();
+
+shell.run(&[Command::new("ls"), Command::new("ls -l")]);
+
+// or equivalently:
+//shell.run_str(&["ls", "ls -l"]);
+~~~
+
+## Run command(s) and return the output
+
+~~~rust
+use sprint::*;
+
+let shell = Shell::default();
+
+let results = shell.run(&[Command {
+    command: String::from("ls"),
+    stdout: Pipe::string(),
+    codes: vec![0],
+    ..Default::default()
+}]);
+
+assert_eq!(
+    results[0].stdout,
+    Pipe::String(Some(String::from("\
+Cargo.lock
+Cargo.toml
+CHANGELOG.md
+Makefile.md
+README.md
+src
+t
+target
+tests
+\
+    "))),
+);
+~~~
+
+## Customize
+
+~~~rust
+use sprint::*;
+
+let shell = Shell {
+    shell: Some(String::from("sh -c")),
+
+    dry_run: false,
+    sync: true,
+    print: true,
+
+    fence: String::from("```"),
+    info: String::from("text"),
+    prompt: String::from("$ "),
+
+    fence_color: bunt::style!("#555555"),
+    info_color: bunt::style!("#555555"),
+    prompt_color: bunt::style!("#555555"),
+    command_color: bunt::style!("#00ffff+bold"),
+    error_color: bunt::style!("#ff0000+bold+italic"),
+};
+
+shell.run(&[Command::new("ls"), Command::new("ls -l")]);
+~~~
+
+## Modify
+
+~~~rust
+use sprint::*;
+
+let mut shell = Shell::default();
+
+shell.shell = None;
+
+shell.run(&[Command::new("ls"), Command::new("ls -l")]);
+
+shell.sync = false;
+
+shell.run(&[Command::new("ls"), Command::new("ls -l")]);
+~~~
+*/
 
 //--------------------------------------------------------------------------------------------------
 
 use bunt::termcolor::{ColorChoice, ColorSpec, StandardStream, WriteColor};
 use rayon::prelude::*;
-use std::io::{Read, Write};
+use std::io::{IsTerminal, Read, Write};
 
 //--------------------------------------------------------------------------------------------------
 
+/**
+Get stdout as a [`StandardStream`]
+*/
+pub fn get_stdout() -> StandardStream {
+    StandardStream::stdout(if std::io::stdout().is_terminal() {
+        ColorChoice::Auto
+    } else {
+        ColorChoice::Never
+    })
+}
+
+/**
+Clear the color style
+*/
+pub fn reset_stdout() {
+    let mut stdout = get_stdout();
+    stdout.reset().unwrap();
+    stdout.flush().unwrap();
+}
+
 macro_rules! cprint {
     ($color:expr, $($x:tt)*) => {
-        let mut stdout = StandardStream::stdout(ColorChoice::Auto);
+        let mut stdout = get_stdout();
         stdout.set_color($color).unwrap();
         write!(&mut stdout, $($x)*).unwrap();
         stdout.reset().unwrap();
@@ -20,7 +142,7 @@ macro_rules! cprint {
 
 macro_rules! cprintln {
     ($color:expr, $($x:tt)*) => {
-        let mut stdout = StandardStream::stdout(ColorChoice::Auto);
+        let mut stdout = get_stdout();
         stdout.set_color($color).unwrap();
         write!(&mut stdout, $($x)*).unwrap();
         stdout.reset().unwrap();
@@ -195,6 +317,9 @@ impl Shell {
         }
     }
 
+    /**
+    Run a single command
+    */
     pub fn run1(&self, command: &Command) -> Command {
         if self.print {
             if !self.dry_run {
@@ -218,6 +343,9 @@ impl Shell {
         self.core(command)
     }
 
+    /**
+    Pipe a single command
+    */
     pub fn pipe1(&self, command: &str) -> String {
         let command = Command {
             command: command.to_string(),
@@ -234,6 +362,9 @@ impl Shell {
         }
     }
 
+    /**
+    Core part to run/pipe a command
+    */
     pub fn core(&self, command: &Command) -> Command {
         let (prog, args) = self.prepare(&command.command);
 
@@ -296,6 +427,30 @@ impl Shell {
             let prog = args.remove(0);
             (prog, args)
         }
+    }
+
+    /**
+    Print the interactive prompt
+    */
+    pub fn interactive_prompt(&self, previous: bool) {
+        if previous {
+            cprintln!(&self.fence_color, "{}\n", self.fence);
+        }
+        cprint!(&self.fence_color, "{}", self.fence);
+        cprintln!(&self.info_color, "{}", self.info);
+        cprint!(&self.prompt_color, "{}", self.prompt);
+
+        // Set the command color
+        let mut stdout = StandardStream::stdout(ColorChoice::Auto);
+        stdout.set_color(&self.command_color).unwrap();
+        stdout.flush().unwrap();
+    }
+
+    /**
+    Simpler interface to run command(s)
+    */
+    pub fn run_str(&self, commands: &[&str]) -> Vec<Command> {
+        self.run(&commands.iter().map(|x| Command::new(x)).collect::<Vec<_>>())
     }
 }
 

@@ -2,6 +2,8 @@ use sprint::*;
 
 #[test]
 fn default() {
+    println!();
+
     let shell = Shell::default();
 
     shell.run(&[Command::new("ls *"), Command::new("ls -l")]);
@@ -9,6 +11,8 @@ fn default() {
 
 #[test]
 fn manual() {
+    println!();
+
     let shell = Shell {
         shell: Some(String::from("sh -c")),
 
@@ -32,6 +36,8 @@ fn manual() {
 
 #[test]
 fn custom() {
+    println!();
+
     let shell = Shell {
         shell: Some(String::from("bash -xeo pipefail -c")),
 
@@ -55,6 +61,8 @@ fn custom() {
 
 #[test]
 fn direct() {
+    println!();
+
     let shell = Shell {
         shell: None,
 
