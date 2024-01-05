@@ -1,6 +1,6 @@
 [package]
 name = "sprint"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2021"
 description = "Command runner"
 repository = "https://github.com/qtfkwk/sprint"

@@ -383,6 +383,17 @@ impl Shell {
             cmd.stderr(std::process::Stdio::piped());
         }
 
+        if self.print {
+            if let Pipe::String(Some(s)) = &command.stdin {
+                cprint!(&self.fence_color, "{}", self.fence);
+                cprintln!(&self.info_color, "{}", command.command);
+                println!("{s}");
+                cprintln!(&self.fence_color, "{}\n", self.fence);
+                cprint!(&self.fence_color, "{}", self.fence);
+                cprintln!(&self.info_color, "{}", self.info);
+            }
+        }
+
         let mut child = cmd.spawn().unwrap();
 
         if let Pipe::String(Some(s)) = &command.stdin {
@@ -407,6 +418,12 @@ impl Shell {
             let mut stderr = String::new();
             child.stderr.unwrap().read_to_string(&mut stderr).unwrap();
             r.stderr = Pipe::String(Some(stderr));
+        }
+
+        if self.print {
+            if let Pipe::String(Some(_s)) = &command.stdin {
+                cprintln!(&self.fence_color, "{}\n", self.fence);
+            }
         }
 
         r
