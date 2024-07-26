@@ -8,4 +8,5 @@
 * 0.4.0 (2023-12-29): Fix error handling
 * 0.5.0 (2024-01-05): Add CLI; update dependencies
 * 0.6.0 (2024-01-05): Fix script mode output
+    * 0.6.1 (2024-07-26): Fix makefile; update dependencies
 
