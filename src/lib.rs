@@ -70,16 +70,17 @@ let shell = Shell {
     dry_run: false,
     sync: true,
     print: true,
+    color: ColorOverride::Auto,
 
     fence: String::from("```"),
     info: String::from("text"),
     prompt: String::from("$ "),
 
-    fence_color: bunt::style!("#555555"),
-    info_color: bunt::style!("#555555"),
-    prompt_color: bunt::style!("#555555"),
-    command_color: bunt::style!("#00ffff+bold"),
-    error_color: bunt::style!("#ff0000+bold+italic"),
+    fence_style: style("#555555").expect("style"),
+    info_style: style("#555555").expect("style"),
+    prompt_style: style("#555555").expect("style"),
+    command_style: style("#00ffff+bold").expect("style"),
+    error_style: style("#ff0000+bold+italic").expect("style"),
 };
 
 shell.run(&[Command::new("ls"), Command::new("ls -l")]);
@@ -104,52 +105,13 @@ shell.run(&[Command::new("ls"), Command::new("ls -l")]);
 
 //--------------------------------------------------------------------------------------------------
 
-use bunt::termcolor::{ColorChoice, ColorSpec, StandardStream, WriteColor};
-use rayon::prelude::*;
-use std::io::{IsTerminal, Read, Write};
-
-//--------------------------------------------------------------------------------------------------
-
-/**
-Get stdout as a [`StandardStream`]
-*/
-pub fn get_stdout() -> StandardStream {
-    StandardStream::stdout(if std::io::stdout().is_terminal() {
-        ColorChoice::Auto
-    } else {
-        ColorChoice::Never
-    })
-}
-
-/**
-Clear the color style
-*/
-pub fn reset_stdout() {
-    let mut stdout = get_stdout();
-    stdout.reset().unwrap();
-    stdout.flush().unwrap();
-}
-
-macro_rules! cprint {
-    ($color:expr, $($x:tt)*) => {
-        let mut stdout = get_stdout();
-        stdout.set_color($color).unwrap();
-        write!(&mut stdout, $($x)*).unwrap();
-        stdout.reset().unwrap();
-        stdout.flush().unwrap();
-    };
-}
-
-macro_rules! cprintln {
-    ($color:expr, $($x:tt)*) => {
-        let mut stdout = get_stdout();
-        stdout.set_color($color).unwrap();
-        write!(&mut stdout, $($x)*).unwrap();
-        stdout.reset().unwrap();
-        writeln!(&mut stdout).unwrap();
-        stdout.flush().unwrap();
-    };
-}
+use {
+    anyhow::{anyhow, Result},
+    clap::ValueEnum,
+    owo_colors::{OwoColorize, Rgb, Stream, Style},
+    rayon::prelude::*,
+    std::io::{Read, Write},
+};
 
 //--------------------------------------------------------------------------------------------------
 
@@ -165,6 +127,134 @@ impl Pipe {
     pub fn string() -> Pipe {
         Pipe::String(None)
     }
+}
+
+//--------------------------------------------------------------------------------------------------
+
+/**
+Create a [`Style`] from a [`&str`] specification
+*/
+pub fn style(s: &str) -> Result<Style> {
+    let mut r = Style::new();
+    for i in s.split('+') {
+        if let Some(color) = i.strip_prefix('#') {
+            r = r.color(html(color)?);
+        } else if let Some(color) = i.strip_prefix("on-#") {
+            r = r.on_color(html(color)?);
+        } else {
+            match i {
+                "black" => r = r.black(),
+                "red" => r = r.red(),
+                "green" => r = r.green(),
+                "yellow" => r = r.yellow(),
+                "blue" => r = r.blue(),
+                "magenta" => r = r.magenta(),
+                "purple" => r = r.purple(),
+                "cyan" => r = r.cyan(),
+                "white" => r = r.white(),
+                //---
+                "bold" => r = r.bold(),
+                "italic" => r = r.italic(),
+                "dimmed" => r = r.dimmed(),
+                "underline" => r = r.underline(),
+                "blink" => r = r.blink(),
+                "blink_fast" => r = r.blink_fast(),
+                "reversed" => r = r.reversed(),
+                "hidden" => r = r.hidden(),
+                "strikethrough" => r = r.strikethrough(),
+                //---
+                "bright-black" => r = r.bright_black(),
+                "bright-red" => r = r.bright_red(),
+                "bright-green" => r = r.bright_green(),
+                "bright-yellow" => r = r.bright_yellow(),
+                "bright-blue" => r = r.bright_blue(),
+                "bright-magenta" => r = r.bright_magenta(),
+                "bright-purple" => r = r.bright_purple(),
+                "bright-cyan" => r = r.bright_cyan(),
+                "bright-white" => r = r.bright_white(),
+                //---
+                "on-black" => r = r.on_black(),
+                "on-red" => r = r.on_red(),
+                "on-green" => r = r.on_green(),
+                "on-yellow" => r = r.on_yellow(),
+                "on-blue" => r = r.on_blue(),
+                "on-magenta" => r = r.on_magenta(),
+                "on-purple" => r = r.on_purple(),
+                "on-cyan" => r = r.on_cyan(),
+                "on-white" => r = r.on_white(),
+                //---
+                "on-bright-black" => r = r.on_bright_black(),
+                "on-bright-red" => r = r.on_bright_red(),
+                "on-bright-green" => r = r.on_bright_green(),
+                "on-bright-yellow" => r = r.on_bright_yellow(),
+                "on-bright-blue" => r = r.on_bright_blue(),
+                "on-bright-magenta" => r = r.on_bright_magenta(),
+                "on-bright-purple" => r = r.on_bright_purple(),
+                "on-bright-cyan" => r = r.on_bright_cyan(),
+                "on-bright-white" => r = r.on_bright_white(),
+                //---
+                _ => return Err(anyhow!("Invalid style spec: {s:?}!")),
+            }
+        }
+    }
+    Ok(r)
+}
+
+fn html(rrggbb: &str) -> Result<Rgb> {
+    let r = u8::from_str_radix(&rrggbb[0..2], 16)?;
+    let g = u8::from_str_radix(&rrggbb[2..4], 16)?;
+    let b = u8::from_str_radix(&rrggbb[4..6], 16)?;
+    Ok(Rgb(r, g, b))
+}
+
+#[derive(Clone, Debug, Default, ValueEnum)]
+pub enum ColorOverride {
+    #[default]
+    Auto,
+    Always,
+    Never,
+}
+
+impl ColorOverride {
+    pub fn init(self) {
+        match self {
+            ColorOverride::Always => owo_colors::set_override(true),
+            ColorOverride::Never => owo_colors::set_override(false),
+            ColorOverride::Auto => {}
+        }
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+
+struct Prefix {
+    style: Style,
+}
+
+impl std::fmt::Display for Prefix {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.style.fmt_prefix(f)
+    }
+}
+
+fn print_prefix(style: Style) {
+    print!("{}", Prefix { style });
+}
+
+//--------------------------------------------------------------------------------------------------
+
+struct Suffix {
+    style: Style,
+}
+
+impl std::fmt::Display for Suffix {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.style.fmt_suffix(f)
+    }
+}
+
+fn print_suffix(style: Style) {
+    print!("{}", Suffix { style });
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -192,16 +282,17 @@ let shell = Shell {
     dry_run: false,
     sync: true,
     print: true,
+    color: ColorOverride::default(),
 
     fence: String::from("```"),
     info: String::from("text"),
     prompt: String::from("$ "),
 
-    fence_color: bunt::style!("#555555"),
-    info_color: bunt::style!("#555555"),
-    prompt_color: bunt::style!("#555555"),
-    command_color: bunt::style!("#00ffff+bold"),
-    error_color: bunt::style!("#ff0000+bold+italic"),
+    fence_style: style("#555555").expect("style"),
+    info_style: style("#555555").expect("style"),
+    prompt_style: style("#555555").expect("style"),
+    command_style: style("#00ffff+bold").expect("style"),
+    error_style: style("#ff0000+bold+italic").expect("style"),
 };
 
 // Or modify it on the fly:
@@ -221,16 +312,17 @@ pub struct Shell {
     pub dry_run: bool,
     pub sync: bool,
     pub print: bool,
+    pub color: ColorOverride,
 
     pub fence: String,
     pub info: String,
     pub prompt: String,
 
-    pub fence_color: ColorSpec,
-    pub info_color: ColorSpec,
-    pub prompt_color: ColorSpec,
-    pub command_color: ColorSpec,
-    pub error_color: ColorSpec,
+    pub fence_style: Style,
+    pub info_style: Style,
+    pub prompt_style: Style,
+    pub command_style: Style,
+    pub error_style: Style,
 }
 
 impl Default for Shell {
@@ -244,16 +336,17 @@ impl Default for Shell {
             dry_run: false,
             sync: true,
             print: true,
+            color: ColorOverride::default(),
 
             fence: String::from("```"),
             info: String::from("text"),
             prompt: String::from("$ "),
 
-            fence_color: bunt::style!("#555555"),
-            info_color: bunt::style!("#555555"),
-            prompt_color: bunt::style!("#555555"),
-            command_color: bunt::style!("#00ffff+bold"),
-            error_color: bunt::style!("#ff0000+bold+italic"),
+            fence_style: style("#555555").expect("style"),
+            info_style: style("#555555").expect("style"),
+            prompt_style: style("#555555").expect("style"),
+            command_style: style("#00ffff+bold").expect("style"),
+            error_style: style("#ff0000+bold+italic").expect("style"),
         }
     }
 }
@@ -265,8 +358,16 @@ impl Shell {
     pub fn run(&self, commands: &[Command]) -> Vec<Command> {
         if self.sync {
             if self.print {
-                cprint!(&self.fence_color, "{}", self.fence);
-                cprintln!(&self.info_color, "{}", self.info);
+                print!(
+                    "{}",
+                    self.fence
+                        .if_supports_color(Stream::Stdout, |x| x.style(self.fence_style))
+                );
+                println!(
+                    "{}",
+                    self.info
+                        .if_supports_color(Stream::Stdout, |x| x.style(self.info_style))
+                );
             }
 
             let mut r = vec![];
@@ -274,7 +375,7 @@ impl Shell {
 
             for (i, command) in commands.iter().enumerate() {
                 if i > 0 && self.print && !self.dry_run {
-                    bunt::println!("");
+                    println!();
                 }
 
                 let result = self.run1(command);
@@ -301,10 +402,17 @@ impl Shell {
             }
 
             if self.print {
-                cprintln!(&self.fence_color, "{}\n", self.fence);
+                println!(
+                    "{}\n",
+                    self.fence
+                        .if_supports_color(Stream::Stdout, |x| x.style(self.fence_style))
+                );
 
                 if let Some(error) = error {
-                    cprintln!(&self.error_color, "{}\n", error);
+                    println!(
+                        "{}\n",
+                        error.if_supports_color(Stream::Stdout, |x| x.style(self.error_style))
+                    );
                 }
             }
 
@@ -323,16 +431,21 @@ impl Shell {
     pub fn run1(&self, command: &Command) -> Command {
         if self.print {
             if !self.dry_run {
-                cprint!(&self.prompt_color, "{}", self.prompt);
+                print!(
+                    "{}",
+                    self.prompt
+                        .if_supports_color(Stream::Stdout, |x| x.style(self.prompt_style))
+                );
             }
-            cprintln!(
-                &self.command_color,
+
+            println!(
                 "{}",
                 command
                     .command
                     .replace(" && ", " \\\n&& ")
                     .replace(" || ", " \\\n|| ")
-                    .replace("; ", "; \\\n"),
+                    .replace("; ", "; \\\n")
+                    .if_supports_color(Stream::Stdout, |x| x.style(self.command_style)),
             );
         }
 
@@ -385,12 +498,33 @@ impl Shell {
 
         if self.print {
             if let Pipe::String(Some(s)) = &command.stdin {
-                cprint!(&self.fence_color, "{}", self.fence);
-                cprintln!(&self.info_color, "{}", command.command);
+                print!(
+                    "{}",
+                    self.fence
+                        .if_supports_color(Stream::Stdout, |x| x.style(self.fence_style))
+                );
+                println!(
+                    "{}",
+                    command
+                        .command
+                        .if_supports_color(Stream::Stdout, |x| x.style(self.info_style))
+                );
                 println!("{s}");
-                cprintln!(&self.fence_color, "{}\n", self.fence);
-                cprint!(&self.fence_color, "{}", self.fence);
-                cprintln!(&self.info_color, "{}", self.info);
+                println!(
+                    "{}\n",
+                    self.fence
+                        .if_supports_color(Stream::Stdout, |x| x.style(self.fence_style))
+                );
+                println!(
+                    "{}",
+                    self.fence
+                        .if_supports_color(Stream::Stdout, |x| x.style(self.fence_style))
+                );
+                println!(
+                    "{}",
+                    self.info
+                        .if_supports_color(Stream::Stdout, |x| x.style(self.info_style))
+                );
             }
         }
 
@@ -422,7 +556,11 @@ impl Shell {
 
         if self.print {
             if let Pipe::String(Some(_s)) = &command.stdin {
-                cprintln!(&self.fence_color, "{}\n", self.fence);
+                println!(
+                    "{}\n",
+                    self.fence
+                        .if_supports_color(Stream::Stdout, |x| x.style(self.fence_style))
+                );
             }
         }
 
@@ -451,16 +589,40 @@ impl Shell {
     */
     pub fn interactive_prompt(&self, previous: bool) {
         if previous {
-            cprintln!(&self.fence_color, "{}\n", self.fence);
+            println!(
+                "{}\n",
+                self.fence
+                    .if_supports_color(Stream::Stdout, |x| x.style(self.fence_style))
+            );
         }
-        cprint!(&self.fence_color, "{}", self.fence);
-        cprintln!(&self.info_color, "{}", self.info);
-        cprint!(&self.prompt_color, "{}", self.prompt);
 
-        // Set the command color
-        let mut stdout = StandardStream::stdout(ColorChoice::Auto);
-        stdout.set_color(&self.command_color).unwrap();
-        stdout.flush().unwrap();
+        print!(
+            "{}",
+            self.fence
+                .if_supports_color(Stream::Stdout, |x| x.style(self.fence_style))
+        );
+        println!(
+            "{}",
+            self.info
+                .if_supports_color(Stream::Stdout, |x| x.style(self.info_style))
+        );
+        print!(
+            "{}",
+            self.prompt
+                .if_supports_color(Stream::Stdout, |x| x.style(self.prompt_style))
+        );
+
+        // Set the command style
+        print_prefix(self.command_style);
+        std::io::stdout().flush().expect("flush");
+    }
+
+    /**
+    Clear the command style
+    */
+    pub fn interactive_prompt_reset(&self) {
+        print_suffix(self.command_style);
+        std::io::stdout().flush().expect("flush");
     }
 
     /**

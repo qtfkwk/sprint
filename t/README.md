@@ -30,8 +30,8 @@ $ sprint -h
 ## Run command(s) given as arguments
 
 ~~~text
-$ sprint 'ls'
-!run:cd .. && ./target/release/sprint 'ls'
+$ sprint ls
+!run:cd .. && ./target/release/sprint --color=never ls
 ~~~
 
 ## Run interactively

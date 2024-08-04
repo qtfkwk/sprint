@@ -32,18 +32,20 @@ Arguments:
   [STRING]...  File(s) or command(s)
 
 Options:
-  -s <STRING>      Shell [default: "sh -c"]
-  -f <STRING>      Fence [default: ```]
-  -i <STRING>      Info [default: text]
-  -p <STRING>      Prompt [default: "$ "]
-  -h, --help       Print help
-  -V, --version    Print version
+  -s <STRING>          Shell [default: "sh -c"]
+  -f <STRING>          Fence [default: ```]
+  -i <STRING>          Info [default: text]
+  -p <STRING>          Prompt [default: "$ "]
+      --color <COLOR>  Force enable/disable terminal colors [default: auto]
+                       [possible values: auto, always, never]
+  -h, --help           Print help
+  -V, --version        Print version
 ```
 
 ## Run command(s) given as arguments
 
 ~~~text
-$ sprint 'ls'
+$ sprint ls
 ```text
 $ ls
 Cargo.lock
@@ -162,4 +164,9 @@ shell.run(&[Command::new("ls"), Command::new("ls -l")]);
 * 0.5.0 (2024-01-05): Add CLI; update dependencies
 * 0.6.0 (2024-01-05): Fix script mode output
     * 0.6.1 (2024-07-26): Fix makefile; update dependencies
+* 0.7.0 (2024-08-04): Switch terminal colors from [`bunt`] to [`owo-colors`] ([ref][rain-rust-cli-colors]); add `--color` option; update dependencies
+
+[`bunt`]: https://crates.io/crates/bunt
+[`owo-colors`]: https://crates.io/crates/owo-colors
+[rain-rust-cli-colors]: https://rust-cli-recommendations.sunshowers.io/managing-colors-in-rust.html
 

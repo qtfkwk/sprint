@@ -19,16 +19,17 @@ fn manual() {
         dry_run: false,
         sync: true,
         print: true,
+        color: ColorOverride::default(),
 
         fence: String::from("```"),
         info: String::from("text"),
         prompt: String::from("$ "),
 
-        fence_color: bunt::style!("#555555"),
-        info_color: bunt::style!("#555555"),
-        prompt_color: bunt::style!("#555555"),
-        command_color: bunt::style!("#00ffff+bold"),
-        error_color: bunt::style!("#ff0000+bold+italic"),
+        fence_style: style("#555555").expect("style"),
+        info_style: style("#555555").expect("style"),
+        prompt_style: style("#555555").expect("style"),
+        command_style: style("#00ffff+bold").expect("style"),
+        error_style: style("#ff0000+bold+italic").expect("style"),
     };
 
     shell.run(&[Command::new("ls *"), Command::new("ls -l")]);
@@ -44,16 +45,17 @@ fn custom() {
         dry_run: false,
         sync: true,
         print: true,
+        color: ColorOverride::default(),
 
         fence: String::from("~~~~"),
         info: String::from("bash"),
         prompt: String::from("> "),
 
-        fence_color: bunt::style!("#ffff00"),
-        info_color: bunt::style!("#ff0000+italic"),
-        prompt_color: bunt::style!("#00ff00"),
-        command_color: bunt::style!("#ff00ff+bold"),
-        error_color: bunt::style!("#00ff00+bold+italic"),
+        fence_style: style("#ffff00").expect("style"),
+        info_style: style("#ff0000+italic").expect("style"),
+        prompt_style: style("#00ff00").expect("style"),
+        command_style: style("#ff00ff+bold").expect("style"),
+        error_style: style("#00ff00+bold+italic").expect("style"),
     };
 
     shell.run(&[Command::new("ls *"), Command::new("ls -l")]);
@@ -69,16 +71,17 @@ fn direct() {
         dry_run: false,
         sync: true,
         print: true,
+        color: ColorOverride::default(),
 
         fence: String::from("```"),
         info: String::from("text"),
         prompt: String::from("$ "),
 
-        fence_color: bunt::style!("#555555"),
-        info_color: bunt::style!("#555555"),
-        prompt_color: bunt::style!("#555555"),
-        command_color: bunt::style!("#00ffff+bold"),
-        error_color: bunt::style!("#ff0000+bold+italic"),
+        fence_style: style("#555555").expect("style"),
+        info_style: style("#555555").expect("style"),
+        prompt_style: style("#555555").expect("style"),
+        command_style: style("#00ffff+bold").expect("style"),
+        error_style: style("#ff0000+bold+italic").expect("style"),
     };
 
     shell.run(&[

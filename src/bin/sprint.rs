@@ -21,6 +21,10 @@ struct Cli {
     #[arg(short, value_name = "STRING", default_value = "$ ")]
     prompt: String,
 
+    /// Force enable/disable terminal colors
+    #[arg(long, default_value = "auto")]
+    color: ColorOverride,
+
     /// File(s) or command(s)
     #[arg(value_name = "STRING")]
     arguments: Vec<String>,
@@ -28,6 +32,8 @@ struct Cli {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+
+    cli.color.init();
 
     let shell = Shell {
         shell: Some(cli.shell.clone()),
@@ -45,7 +51,7 @@ fn main() -> Result<()> {
         loop {
             let mut command = String::new();
             if stdin.read_line(&mut command).is_ok() {
-                reset_stdout();
+                shell.interactive_prompt_reset();
 
                 if command.is_empty() {
                     // Control + D

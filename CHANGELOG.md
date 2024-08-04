@@ -9,4 +9,9 @@
 * 0.5.0 (2024-01-05): Add CLI; update dependencies
 * 0.6.0 (2024-01-05): Fix script mode output
     * 0.6.1 (2024-07-26): Fix makefile; update dependencies
+* 0.7.0 (2024-08-04): Switch terminal colors from [`bunt`] to [`owo-colors`] ([ref][rain-rust-cli-colors]); add `--color` option; update dependencies
+
+[`bunt`]: https://crates.io/crates/bunt
+[`owo-colors`]: https://crates.io/crates/owo-colors
+[rain-rust-cli-colors]: https://rust-cli-recommendations.sunshowers.io/managing-colors-in-rust.html
 

@@ -1,6 +1,6 @@
 [package]
 name = "sprint"
-version = "0.6.1"
+version = "0.7.0"
 edition = "2021"
 description = "Command runner"
 repository = "https://github.com/qtfkwk/sprint"
@@ -8,7 +8,7 @@ license = "MIT"
 
 [dependencies]
 anyhow = "1.0.86"
-bunt = "0.2.8"
-clap = { version = "4.5.11", features = ["derive", "wrap_help"] }
+clap = { version = "4.5.13", features = ["derive", "wrap_help"] }
+owo-colors = { version = "4.0.0", features = ["supports-colors"] }
 rayon = "1.10.0"
 shlex = "1.3.0"
