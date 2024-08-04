@@ -216,7 +216,7 @@ pub enum ColorOverride {
 }
 
 impl ColorOverride {
-    pub fn init(self) {
+    pub fn init(&self) {
         match self {
             ColorOverride::Always => owo_colors::set_override(true),
             ColorOverride::Never => owo_colors::set_override(false),
