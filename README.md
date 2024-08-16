@@ -166,6 +166,7 @@ shell.run(&[Command::new("ls"), Command::new("ls -l")]);
     * 0.6.1 (2024-07-26): Fix makefile; update dependencies
 * 0.7.0 (2024-08-04): Switch terminal colors from [`bunt`] to [`owo-colors`] ([ref][rain-rust-cli-colors]); add `--color` option; update dependencies
     * 0.7.1 (2024-08-04): Fix color init
+    * 0.7.2 (2024-08-16): Update dependencies
 
 [`bunt`]: https://crates.io/crates/bunt
 [`owo-colors`]: https://crates.io/crates/owo-colors
