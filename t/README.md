@@ -126,5 +126,10 @@ shell.sync = false;
 shell.run(&[Command::new("ls"), Command::new("ls -l")]);
 ~~~
 
-!inc:../CHANGELOG.md
+# Changelog
+
+Please find the [`CHANGELOG.md`] in the [repository].
+
+[`CHANGELOG.md`]: https://github.com/qtfkwk/sprint/blob/main/CHANGELOG.md
+[repository]: https://github.com/qtfkwk/sprint/
 
