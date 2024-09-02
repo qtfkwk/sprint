@@ -131,9 +131,7 @@ impl Pipe {
 
 //--------------------------------------------------------------------------------------------------
 
-/**
-Create a [`Style`] from a [`&str`] specification
-*/
+/// Create a [`Style`] from a [`&str`] specification
 pub fn style(s: &str) -> Result<Style> {
     let mut r = Style::new();
     for i in s.split('+') {
@@ -326,9 +324,7 @@ pub struct Shell {
 }
 
 impl Default for Shell {
-    /**
-    Default [`Shell`]
-    */
+    /// Default [`Shell`]
     fn default() -> Shell {
         Shell {
             shell: Some(String::from("sh -c")),
@@ -352,17 +348,11 @@ impl Default for Shell {
 }
 
 impl Shell {
-    /**
-    Run command(s)
-    */
+    /// Run command(s)
     pub fn run(&self, commands: &[Command]) -> Vec<Command> {
         if self.sync {
             if self.print {
-                print!(
-                    "{}",
-                    self.fence
-                        .if_supports_color(Stream::Stdout, |x| x.style(self.fence_style))
-                );
+                self.print_fence(0);
                 println!(
                     "{}",
                     self.info
@@ -402,11 +392,7 @@ impl Shell {
             }
 
             if self.print {
-                println!(
-                    "{}\n",
-                    self.fence
-                        .if_supports_color(Stream::Stdout, |x| x.style(self.fence_style))
-                );
+                self.print_fence(2);
 
                 if let Some(error) = error {
                     println!(
@@ -425,9 +411,7 @@ impl Shell {
         }
     }
 
-    /**
-    Run a single command
-    */
+    /// Run a single command
     pub fn run1(&self, command: &Command) -> Command {
         if self.print {
             if !self.dry_run {
@@ -456,9 +440,7 @@ impl Shell {
         self.core(command)
     }
 
-    /**
-    Pipe a single command
-    */
+    /// Pipe a single command
     pub fn pipe1(&self, command: &str) -> String {
         let command = Command {
             command: command.to_string(),
@@ -475,10 +457,8 @@ impl Shell {
         }
     }
 
-    /**
-    Core part to run/pipe a command
-    */
-    pub fn core(&self, command: &Command) -> Command {
+    /// Run a command in a child process
+    pub fn run1_async(&self, command: &Command) -> std::process::Child {
         let (prog, args) = self.prepare(&command.command);
 
         let mut cmd = std::process::Command::new(prog);
@@ -498,11 +478,7 @@ impl Shell {
 
         if self.print {
             if let Pipe::String(Some(s)) = &command.stdin {
-                print!(
-                    "{}",
-                    self.fence
-                        .if_supports_color(Stream::Stdout, |x| x.style(self.fence_style))
-                );
+                self.print_fence(0);
                 println!(
                     "{}",
                     command
@@ -510,16 +486,8 @@ impl Shell {
                         .if_supports_color(Stream::Stdout, |x| x.style(self.info_style))
                 );
                 println!("{s}");
-                println!(
-                    "{}\n",
-                    self.fence
-                        .if_supports_color(Stream::Stdout, |x| x.style(self.fence_style))
-                );
-                println!(
-                    "{}",
-                    self.fence
-                        .if_supports_color(Stream::Stdout, |x| x.style(self.fence_style))
-                );
+                self.print_fence(2);
+                self.print_fence(1);
                 println!(
                     "{}",
                     self.info
@@ -529,6 +497,18 @@ impl Shell {
         }
 
         let mut child = cmd.spawn().unwrap();
+
+        if let Pipe::String(Some(s)) = &command.stdin {
+            let mut stdin = child.stdin.take().unwrap();
+            stdin.write_all(s.as_bytes()).unwrap();
+        }
+
+        child
+    }
+
+    /// Core part to run/pipe a command
+    pub fn core(&self, command: &Command) -> Command {
+        let mut child = self.run1_async(command);
 
         if let Pipe::String(Some(s)) = &command.stdin {
             let mut stdin = child.stdin.take().unwrap();
@@ -556,20 +536,14 @@ impl Shell {
 
         if self.print {
             if let Pipe::String(Some(_s)) = &command.stdin {
-                println!(
-                    "{}\n",
-                    self.fence
-                        .if_supports_color(Stream::Stdout, |x| x.style(self.fence_style))
-                );
+                self.print_fence(2);
             }
         }
 
         r
     }
 
-    /**
-    Prepare the command
-    */
+    /// Prepare the command
     fn prepare(&self, command: &str) -> (String, Vec<String>) {
         if let Some(s) = &self.shell {
             let mut args = shlex::split(s).unwrap();
@@ -584,23 +558,24 @@ impl Shell {
         }
     }
 
-    /**
-    Print the interactive prompt
-    */
+    /// Print the fence
+    pub fn print_fence(&self, newlines: usize) {
+        print!(
+            "{}{}",
+            self.fence
+                .if_supports_color(Stream::Stdout, |x| x.style(self.fence_style)),
+            "\n".repeat(newlines),
+        );
+    }
+
+    /// Print the interactive prompt
     pub fn interactive_prompt(&self, previous: bool) {
         if previous {
-            println!(
-                "{}\n",
-                self.fence
-                    .if_supports_color(Stream::Stdout, |x| x.style(self.fence_style))
-            );
+            self.print_fence(2);
         }
 
-        print!(
-            "{}",
-            self.fence
-                .if_supports_color(Stream::Stdout, |x| x.style(self.fence_style))
-        );
+        self.print_fence(0);
+
         println!(
             "{}",
             self.info
@@ -617,17 +592,13 @@ impl Shell {
         std::io::stdout().flush().expect("flush");
     }
 
-    /**
-    Clear the command style
-    */
+    /// Clear the command style
     pub fn interactive_prompt_reset(&self) {
         print_suffix(self.command_style);
         std::io::stdout().flush().expect("flush");
     }
 
-    /**
-    Simpler interface to run command(s)
-    */
+    /// Simpler interface to run command(s)
     pub fn run_str(&self, commands: &[&str]) -> Vec<Command> {
         self.run(&commands.iter().map(|x| Command::new(x)).collect::<Vec<_>>())
     }

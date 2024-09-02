@@ -13,6 +13,7 @@
     * 0.7.1 (2024-08-04): Fix color init
     * 0.7.2 (2024-08-16): Update dependencies
     * 0.7.3 (2024-08-22): Fix readme; add `commit` target to makefile; update dependencies
+* 0.8.0 (2024-09-02): Add watch mode / `-w` and `-d` options; streamline docstrings; add the print_fence and run1_async methods; update dependencies
 
 [`bunt`]: https://crates.io/crates/bunt
 [`owo-colors`]: https://crates.io/crates/owo-colors

@@ -15,10 +15,11 @@ the settings you want.
 ---
 
 The `sprint` crate also provides the `sprint` CLI which provides an easy way to
-use the library directly from the command line in two modes:
+use the library directly from the command line in three modes:
 
 * [Run command(s) given as arguments](#run-commands-given-as-arguments)
 * [Run interactively](#run-interactively)
+* [Run in watch mode](#run-in-watch-mode)
 
 # CLI examples
 
@@ -37,6 +38,36 @@ $ sprint ls
 ## Run interactively
 
 ![](interactive.png)
+
+## Run in watch mode
+
+Run a command, then watch one or more file or directory paths for changes, and rerun the command.
+
+Watch mode is similar to [`cargo-watch`], [`watchexec`], [`inotifywait`], and other utilities except
+these utilities tend to *misfire* and rerun the command on events that don't actually modify a
+file's content.
+To prevent this behavior, `sprint` only runs if a watched file is actually modified, or a file or
+directory is created or deleted in a watched directory.
+
+[`cargo-watch`]: https://crates.io/crates/cargo-watch
+[`watchexec`]: https://crates.io/crates/watchexec-cli
+[`inotifywait`]: https://linux.die.net/man/1/inotifywait
+
+~~~text
+$ sprint -w src 'cargo build'
+```text
+$ cargo build
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s
+```
+
+* Modified: `/home/qtfkwk/github.com/qtfkwk/sprint/src/bin/sprint.rs`
+
+```text
+$ cargo build
+   Compiling sprint v0.8.0 (/home/qtfkwk/github.com/qtfkwk/sprint)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.96s
+...
+~~~
 
 # Library examples
 
