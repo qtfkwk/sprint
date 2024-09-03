@@ -41,13 +41,18 @@ $ sprint ls
 
 ## Run in watch mode
 
-Run a command, then watch one or more file or directory paths for changes, and rerun the command.
+Run a command, watch one or more file or directory paths for changes, kill the command if it is
+still running, and rerun the command.
 
 Watch mode is similar to [`cargo-watch`], [`watchexec`], [`inotifywait`], and other utilities except
-these utilities tend to *misfire* and rerun the command on events that don't actually modify a
-file's content.
-To prevent this behavior, `sprint` only runs if a watched file is actually modified, or a file or
-directory is created or deleted in a watched directory.
+these *misfire* on events that don't actually modify a file's *contents*; `sprint` only runs if a
+watched file's contents are modified, or a file or directory is created or deleted in a watched
+directory.
+
+If a command is not provided, `sprint` simply reports actionable changes.
+A `.gitignore` file in the current directory is used to ignore files unless given explicitly by a
+`-w` option.
+Use the `-d` option to modify the debounce time used to ignore subsequent events.
 
 [`cargo-watch`]: https://crates.io/crates/cargo-watch
 [`watchexec`]: https://crates.io/crates/watchexec-cli
@@ -60,11 +65,11 @@ $ cargo build
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s
 ```
 
-* Modified: `/home/qtfkwk/github.com/qtfkwk/sprint/src/bin/sprint.rs`
+* Modified: `src/bin/sprint.rs`
 
 ```text
 $ cargo build
-   Compiling sprint v0.8.0 (/home/qtfkwk/github.com/qtfkwk/sprint)
+   Compiling sprint v0.9.0 (/home/qtfkwk/github.com/qtfkwk/sprint)
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.96s
 ...
 ~~~

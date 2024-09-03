@@ -40,7 +40,7 @@ cargo clippy -- -D clippy::all
 * `**/*.rs`
 
 ```
-cargo test --release
+cargo test -- --test-threads=1
 ```
 
 # build

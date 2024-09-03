@@ -1,49 +1,54 @@
 use {
     anyhow::Result,
     clap::Parser,
-    glob::glob,
+    ignore::gitignore::Gitignore,
     notify::{
         event::{AccessKind, AccessMode},
         Event, EventKind, RecursiveMode, Watcher,
     },
     sprint::*,
-    std::{collections::BTreeMap, path::PathBuf, thread::sleep, time::Duration},
+    std::{
+        collections::BTreeMap,
+        path::{Path, PathBuf},
+        thread::sleep,
+        time::Duration,
+    },
 };
 
 #[derive(Parser)]
 #[command(about, version, max_term_width = 80)]
 struct Cli {
-    /// Shell
-    #[arg(short, value_name = "STRING", default_value = "sh -c")]
-    shell: String,
-
-    /// Watch files/directories and rerun command on change; see also `-d` option
-    #[arg(short, value_name = "PATH")]
-    watch: Vec<PathBuf>,
-
-    /// Debounce; used only with `-w`
-    #[arg(short, value_name = "SECONDS", default_value = "5.0")]
-    debounce: f32,
-
-    /// Fence
-    #[arg(short, value_name = "STRING", default_value = "```")]
-    fence: String,
-
-    /// Info
-    #[arg(short, value_name = "STRING", default_value = "text")]
-    info: String,
-
-    /// Prompt
-    #[arg(short, value_name = "STRING", default_value = "$ ")]
-    prompt: String,
-
-    /// Force enable/disable terminal colors
-    #[arg(long, default_value = "auto")]
-    color: ColorOverride,
-
     /// File(s) or command(s)
     #[arg(value_name = "STRING")]
     arguments: Vec<String>,
+
+    /// Shell
+    #[arg(short, long, value_name = "STRING", default_value = "sh -c")]
+    shell: String,
+
+    /// Fence
+    #[arg(short, long, value_name = "STRING", default_value = "```")]
+    fence: String,
+
+    /// Info
+    #[arg(short, long, value_name = "STRING", default_value = "text")]
+    info: String,
+
+    /// Prompt
+    #[arg(short, long, value_name = "STRING", default_value = "$ ")]
+    prompt: String,
+
+    /// Watch files/directories and rerun command on change; see also `-d` option
+    #[arg(short, long, value_name = "PATH")]
+    watch: Vec<PathBuf>,
+
+    /// Debounce; used only with `-w`
+    #[arg(short, long, value_name = "SECONDS", default_value = "5.0")]
+    debounce: f32,
+
+    /// Force enable/disable terminal colors
+    #[arg(short = 'C', long, default_value = "auto")]
+    color: ColorOverride,
 }
 
 fn main() -> Result<()> {
@@ -59,7 +64,10 @@ fn main() -> Result<()> {
         ..Default::default()
     };
 
-    if cli.arguments.is_empty() {
+    let no_arguments = cli.arguments.is_empty();
+    let no_watch = cli.watch.is_empty();
+
+    if no_arguments && no_watch {
         // Run interactively
 
         let stdin = std::io::stdin();
@@ -89,7 +97,7 @@ fn main() -> Result<()> {
                 std::process::exit(1);
             }
         }
-    } else if cli.watch.is_empty() {
+    } else if no_watch {
         // Run given commands / files
 
         let results = shell.run(
@@ -105,6 +113,86 @@ fn main() -> Result<()> {
         } else {
             1
         });
+    } else if no_arguments {
+        // Watch, but no commands...
+
+        // Get watched directories & files
+        let (dirs, mut hashes, ignored) = watched(&cli.watch);
+        let pwd = std::env::current_dir().unwrap();
+
+        let debounce = std::time::Duration::from_secs_f32(cli.debounce);
+        let mut ts = std::time::Instant::now();
+
+        let mut watcher =
+            notify::recommended_watcher(move |res: notify::Result<Event>| match res {
+                Ok(event) => {
+                    let now = std::time::Instant::now();
+                    match event.kind {
+                        EventKind::Create(_) | EventKind::Remove(_) => {
+                            // Created or deleted a file/directory
+                            'outer: for path in event
+                                .paths
+                                .iter()
+                                .map(|x| x.strip_prefix(&pwd).unwrap().to_path_buf())
+                                .filter(|x| not_ignored(x, &ignored, &dirs, &hashes))
+                            {
+                                if now - ts > debounce {
+                                    println!(
+                                        "* {}: `{}`",
+                                        match event.kind {
+                                            EventKind::Create(_) => "Created",
+                                            EventKind::Remove(_) => "Removed",
+                                            _ => unreachable!(),
+                                        },
+                                        path.display(),
+                                    );
+                                    ts = now;
+                                    break 'outer;
+                                }
+                            }
+                        }
+                        EventKind::Access(AccessKind::Close(AccessMode::Write)) => {
+                            // Wrote a file
+                            let mut not_restarted = true;
+                            let paths = event
+                                .paths
+                                .iter()
+                                .map(|x| x.strip_prefix(&pwd).unwrap().to_path_buf())
+                                .filter(|x| not_ignored(x, &ignored, &dirs, &hashes))
+                                .collect::<Vec<_>>();
+                            for path in paths {
+                                if let Some(h1) = hashes.get(&path) {
+                                    let h2 = fhc::file_blake3(&path).unwrap();
+                                    if h2 != *h1 {
+                                        // File changed...
+
+                                        // Update the hash
+                                        hashes.insert(path.clone(), h2);
+
+                                        if not_restarted && now - ts > debounce {
+                                            println!("* Modified: `{}`", path.display());
+                                            ts = now;
+                                            not_restarted = false;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                Err(_e) => {
+                    std::process::exit(1);
+                }
+            })?;
+
+        for path in &cli.watch {
+            watcher.watch(path, RecursiveMode::Recursive)?;
+        }
+
+        loop {
+            sleep(Duration::from_secs_f32(0.25));
+        }
     } else {
         // Watch
 
@@ -118,74 +206,61 @@ fn main() -> Result<()> {
         let command = Command::new(&cli.arguments[0]);
         let (mut process, mut ts) = run(&shell, &command);
 
-        // Get canonical directories
-        let dirs = cli
-            .watch
-            .iter()
-            .filter_map(|x| {
-                if x.is_dir() {
-                    Some(x.canonicalize().unwrap())
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<_>>();
-
-        // Glob files in watched directories
-        let globbed = find_files(&dirs);
-
-        // Get hashes for all watched files
-        let mut hashes = cli
-            .watch
-            .iter()
-            .filter(|x| x.is_file())
-            .chain(globbed.iter())
-            .map(|x| (x.canonicalize().unwrap(), fhc::file_blake3(x).unwrap()))
-            .collect::<BTreeMap<_, _>>();
+        // Get watched directories & files
+        let (dirs, mut hashes, ignored) = watched(&cli.watch);
+        let pwd = std::env::current_dir().unwrap();
 
         let debounce = std::time::Duration::from_secs_f32(cli.debounce);
 
         let mut watcher =
             notify::recommended_watcher(move |res: notify::Result<Event>| match res {
                 Ok(event) => {
+                    let now = std::time::Instant::now();
                     match event.kind {
                         EventKind::Create(_) | EventKind::Remove(_) => {
                             // Created or deleted a file/directory
-                            for path in event.paths {
-                                for dir in &dirs {
-                                    if path.starts_with(dir) {
-                                        // In a watched directory...
+                            for path in event
+                                .paths
+                                .iter()
+                                .map(|x| x.strip_prefix(&pwd).unwrap().to_path_buf())
+                                .filter(|x| not_ignored(x, &ignored, &dirs, &hashes))
+                            {
+                                // In a watched directory...
 
-                                        if std::time::Instant::now() - ts > debounce {
-                                            // Kill the command (if still running)
-                                            if let Ok(None) = process.try_wait() {
-                                                process.kill().expect("kill process");
-                                            }
-                                            shell.print_fence(2);
-
-                                            println!(
-                                                "* {}: `{}`\n",
-                                                match event.kind {
-                                                    EventKind::Create(_) => "Created",
-                                                    EventKind::Remove(_) => "Removed",
-                                                    _ => unreachable!(),
-                                                },
-                                                path.display()
-                                            );
-
-                                            // Run the command again
-                                            (process, ts) = run(&shell, &command);
-
-                                            break;
-                                        }
+                                if now - ts > debounce {
+                                    // Kill the command (if still running)
+                                    if let Ok(None) = process.try_wait() {
+                                        process.kill().expect("kill process");
                                     }
+                                    shell.print_fence(2);
+
+                                    println!(
+                                        "* {}: `{}`\n",
+                                        match event.kind {
+                                            EventKind::Create(_) => "Created",
+                                            EventKind::Remove(_) => "Removed",
+                                            _ => unreachable!(),
+                                        },
+                                        path.display(),
+                                    );
+
+                                    // Run the command again
+                                    (process, ts) = run(&shell, &command);
+
+                                    break;
                                 }
                             }
                         }
                         EventKind::Access(AccessKind::Close(AccessMode::Write)) => {
                             // Wrote a file
                             let mut not_restarted = true;
-                            for path in event.paths {
+                            let paths = event
+                                .paths
+                                .iter()
+                                .map(|x| x.strip_prefix(&pwd).unwrap().to_path_buf())
+                                .filter(|x| not_ignored(x, &ignored, &dirs, &hashes))
+                                .collect::<Vec<_>>();
+                            for path in paths {
                                 if let Some(h1) = hashes.get(&path) {
                                     let h2 = fhc::file_blake3(&path).unwrap();
                                     if h2 != *h1 {
@@ -194,9 +269,7 @@ fn main() -> Result<()> {
                                         // Update the hash
                                         hashes.insert(path.clone(), h2);
 
-                                        if not_restarted
-                                            && std::time::Instant::now() - ts > debounce
-                                        {
+                                        if not_restarted && now - ts > debounce {
                                             // Kill the command (if still running)
                                             if let Ok(None) = process.try_wait() {
                                                 process.kill().expect("kill process");
@@ -217,7 +290,6 @@ fn main() -> Result<()> {
                     }
                 }
                 Err(_e) => {
-                    // println!("watch error: {:?}", e);
                     std::process::exit(1);
                 }
             })?;
@@ -234,24 +306,60 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn find_files(dirs: &[PathBuf]) -> Vec<PathBuf> {
-    let original_directory = std::env::current_dir().unwrap();
-    let mut r = vec![];
-    for dir in dirs {
-        std::env::set_current_dir(dir).unwrap();
-        for path in glob("**/*").unwrap().flatten() {
-            if path.is_file() {
-                r.push(path.canonicalize().unwrap());
-            }
-        }
-        std::env::set_current_dir(&original_directory).unwrap();
-    }
-    r
-}
-
 fn run(shell: &Shell, command: &Command) -> (std::process::Child, std::time::Instant) {
     shell.interactive_prompt(false);
     println!("{}", command.command);
     shell.interactive_prompt_reset();
     (shell.run1_async(command), std::time::Instant::now())
+}
+
+fn watched(args: &[PathBuf]) -> (Vec<PathBuf>, BTreeMap<PathBuf, String>, Gitignore) {
+    // Get directories
+    let dirs = args
+        .iter()
+        .filter(|x| x.is_dir())
+        .cloned()
+        .collect::<Vec<_>>();
+
+    // Get hashes for all watched files
+    let hashes = args
+        .iter()
+        .filter(|x| x.is_file())
+        .cloned()
+        .chain(dirs.iter().flat_map(|x| {
+            ignore::Walk::new(x)
+                .flatten()
+                .filter(|x| x.path().is_file())
+                .map(|x| {
+                    let path = x.into_path();
+                    match path.strip_prefix("./") {
+                        Ok(p) => p.to_path_buf(),
+                        Err(_e) => path,
+                    }
+                })
+        }))
+        .map(|x| {
+            let hash = fhc::file_blake3(&x).unwrap();
+            (x, hash)
+        })
+        .collect::<BTreeMap<_, _>>();
+
+    // Build Gitignore
+    let (ignored, _errors) = Gitignore::new(".gitignore");
+
+    (dirs, hashes, ignored)
+}
+
+fn not_ignored(
+    path: &Path,
+    ignored: &Gitignore,
+    dirs: &[PathBuf],
+    hashes: &BTreeMap<PathBuf, String>,
+) -> bool {
+    let path = path.to_owned();
+    !ignored
+        .matched_path_or_any_parents(&path, path.is_dir())
+        .is_ignore()
+        && !dirs.contains(&path)
+        && !hashes.contains_key(&path)
 }
