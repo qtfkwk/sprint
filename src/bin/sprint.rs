@@ -1,7 +1,7 @@
 use {
     anyhow::Result,
     clap::Parser,
-    ignore::gitignore::Gitignore,
+    ignore_check::Ignore,
     notify::{
         event::{AccessKind, AccessMode},
         Event, EventKind, RecursiveMode, Watcher,
@@ -117,7 +117,8 @@ fn main() -> Result<()> {
         // Watch, but no commands...
 
         // Get watched directories & files
-        let (dirs, mut hashes, ignored) = watched(&cli.watch);
+        let (dirs, mut hashes) = watched(&cli.watch);
+        let ignored = Ignore::default();
         let pwd = std::env::current_dir().unwrap();
 
         let debounce = std::time::Duration::from_secs_f32(cli.debounce);
@@ -207,7 +208,8 @@ fn main() -> Result<()> {
         let (mut process, mut ts) = run(&shell, &command);
 
         // Get watched directories & files
-        let (dirs, mut hashes, ignored) = watched(&cli.watch);
+        let (dirs, mut hashes) = watched(&cli.watch);
+        let ignored = Ignore::default();
         let pwd = std::env::current_dir().unwrap();
 
         let debounce = std::time::Duration::from_secs_f32(cli.debounce);
@@ -313,7 +315,7 @@ fn run(shell: &Shell, command: &Command) -> (std::process::Child, std::time::Ins
     (shell.run1_async(command), std::time::Instant::now())
 }
 
-fn watched(args: &[PathBuf]) -> (Vec<PathBuf>, BTreeMap<PathBuf, String>, Gitignore) {
+fn watched(args: &[PathBuf]) -> (Vec<PathBuf>, BTreeMap<PathBuf, String>) {
     // Get directories
     let dirs = args
         .iter()
@@ -344,22 +346,15 @@ fn watched(args: &[PathBuf]) -> (Vec<PathBuf>, BTreeMap<PathBuf, String>, Gitign
         })
         .collect::<BTreeMap<_, _>>();
 
-    // Build Gitignore
-    let (ignored, _errors) = Gitignore::new(".gitignore");
-
-    (dirs, hashes, ignored)
+    (dirs, hashes)
 }
 
 fn not_ignored(
     path: &Path,
-    ignored: &Gitignore,
+    ignored: &Ignore,
     dirs: &[PathBuf],
     hashes: &BTreeMap<PathBuf, String>,
 ) -> bool {
     let path = path.to_owned();
-    !ignored
-        .matched_path_or_any_parents(&path, path.is_dir())
-        .is_ignore()
-        && !dirs.contains(&path)
-        && !hashes.contains_key(&path)
+    !ignored.check(&path) && !dirs.contains(&path) && !hashes.contains_key(&path)
 }

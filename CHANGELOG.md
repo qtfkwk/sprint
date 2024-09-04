@@ -15,6 +15,7 @@
     * 0.7.3 (2024-08-22): Fix readme; add `commit` target to makefile; update dependencies
 * 0.8.0 (2024-09-02): Add watch mode / `-w` and `-d` options; streamline docstrings; add the print_fence and run1_async methods; update dependencies
 * 0.9.0 (2024-09-03): Make watch mode respect `.gitignore` file and enable running without a command; add long options; fix makefile
+* 0.10.0 (2024-09-04): Use [`ignore-check`] crate to check paths from notify events; update dependencies
 
 [`bunt`]: https://crates.io/crates/bunt
 [`owo-colors`]: https://crates.io/crates/owo-colors
