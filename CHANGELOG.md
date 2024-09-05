@@ -17,6 +17,7 @@
 * 0.9.0 (2024-09-03): Make watch mode respect `.gitignore` file and enable running without a command; add long options; fix makefile
 * 0.10.0 (2024-09-04): Use [`ignore-check`] crate to check paths from notify events; update dependencies
     * 0.10.1 (2024-09-04): Fix changelog
+    * 0.10.2 (2024-09-04): Fix bug introduced in 0.8.0 that made any command with stdin attempt to write to stdin twice
 
 [`bunt`]: https://crates.io/crates/bunt
 [`ignore-check`]: https://crates.io/crates/ignore-check

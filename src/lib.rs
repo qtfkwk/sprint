@@ -510,11 +510,6 @@ impl Shell {
     pub fn core(&self, command: &Command) -> Command {
         let mut child = self.run1_async(command);
 
-        if let Pipe::String(Some(s)) = &command.stdin {
-            let mut stdin = child.stdin.take().unwrap();
-            stdin.write_all(s.as_bytes()).unwrap();
-        }
-
         let mut r = command.clone();
 
         r.code = match child.wait() {
