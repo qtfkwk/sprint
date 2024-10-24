@@ -18,7 +18,9 @@
 * 0.10.0 (2024-09-04): Use [`ignore-check`] crate to check paths from notify events; update dependencies
     * 0.10.1 (2024-09-04): Fix changelog
     * 0.10.2 (2024-09-04): Fix bug introduced in 0.8.0 that made any command with stdin attempt to write to stdin twice
+* 0.11.0 (2024-10-24): Add clap color; switch from owo-colors' support-colors feature to [`anstream`]; update dependencies
 
+[`anstream`]: https://crates.io/crates/anstream
 [`bunt`]: https://crates.io/crates/bunt
 [`ignore-check`]: https://crates.io/crates/ignore-check
 [`owo-colors`]: https://crates.io/crates/owo-colors

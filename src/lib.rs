@@ -106,9 +106,10 @@ shell.run(&[Command::new("ls"), Command::new("ls -l")]);
 //--------------------------------------------------------------------------------------------------
 
 use {
+    anstream::{print, println},
     anyhow::{anyhow, Result},
     clap::ValueEnum,
-    owo_colors::{OwoColorize, Rgb, Stream, Style},
+    owo_colors::{OwoColorize, Rgb, Style},
     rayon::prelude::*,
     std::io::{Read, Write},
 };
@@ -216,8 +217,8 @@ pub enum ColorOverride {
 impl ColorOverride {
     pub fn init(&self) {
         match self {
-            ColorOverride::Always => owo_colors::set_override(true),
-            ColorOverride::Never => owo_colors::set_override(false),
+            ColorOverride::Always => anstream::ColorChoice::Always.write_global(),
+            ColorOverride::Never => anstream::ColorChoice::Never.write_global(),
             ColorOverride::Auto => {}
         }
     }
@@ -353,11 +354,7 @@ impl Shell {
         if self.sync {
             if self.print {
                 self.print_fence(0);
-                println!(
-                    "{}",
-                    self.info
-                        .if_supports_color(Stream::Stdout, |x| x.style(self.info_style))
-                );
+                println!("{}", self.info.style(self.info_style));
             }
 
             let mut r = vec![];
@@ -395,10 +392,7 @@ impl Shell {
                 self.print_fence(2);
 
                 if let Some(error) = error {
-                    println!(
-                        "{}\n",
-                        error.if_supports_color(Stream::Stdout, |x| x.style(self.error_style))
-                    );
+                    println!("{}\n", error.style(self.error_style));
                 }
             }
 
@@ -415,11 +409,7 @@ impl Shell {
     pub fn run1(&self, command: &Command) -> Command {
         if self.print {
             if !self.dry_run {
-                print!(
-                    "{}",
-                    self.prompt
-                        .if_supports_color(Stream::Stdout, |x| x.style(self.prompt_style))
-                );
+                print!("{}", self.prompt.style(self.prompt_style));
             }
 
             println!(
@@ -429,7 +419,7 @@ impl Shell {
                     .replace(" && ", " \\\n&& ")
                     .replace(" || ", " \\\n|| ")
                     .replace("; ", "; \\\n")
-                    .if_supports_color(Stream::Stdout, |x| x.style(self.command_style)),
+                    .style(self.command_style),
             );
         }
 
@@ -479,20 +469,11 @@ impl Shell {
         if self.print {
             if let Pipe::String(Some(s)) = &command.stdin {
                 self.print_fence(0);
-                println!(
-                    "{}",
-                    command
-                        .command
-                        .if_supports_color(Stream::Stdout, |x| x.style(self.info_style))
-                );
+                println!("{}", command.command.style(self.info_style));
                 println!("{s}");
                 self.print_fence(2);
                 self.print_fence(1);
-                println!(
-                    "{}",
-                    self.info
-                        .if_supports_color(Stream::Stdout, |x| x.style(self.info_style))
-                );
+                println!("{}", self.info.style(self.info_style));
             }
         }
 
@@ -557,8 +538,7 @@ impl Shell {
     pub fn print_fence(&self, newlines: usize) {
         print!(
             "{}{}",
-            self.fence
-                .if_supports_color(Stream::Stdout, |x| x.style(self.fence_style)),
+            self.fence.style(self.fence_style),
             "\n".repeat(newlines),
         );
     }
@@ -571,16 +551,8 @@ impl Shell {
 
         self.print_fence(0);
 
-        println!(
-            "{}",
-            self.info
-                .if_supports_color(Stream::Stdout, |x| x.style(self.info_style))
-        );
-        print!(
-            "{}",
-            self.prompt
-                .if_supports_color(Stream::Stdout, |x| x.style(self.prompt_style))
-        );
+        println!("{}", self.info.style(self.info_style));
+        print!("{}", self.prompt.style(self.prompt_style));
 
         // Set the command style
         print_prefix(self.command_style);

@@ -1,6 +1,7 @@
 use {
+    anstream::println,
     anyhow::Result,
-    clap::Parser,
+    clap::{builder::Styles, Parser},
     ignore_check::Ignore,
     notify::{
         event::{AccessKind, AccessMode},
@@ -15,8 +16,17 @@ use {
     },
 };
 
+const STYLES: Styles = Styles::styled()
+    .header(clap_cargo::style::HEADER)
+    .usage(clap_cargo::style::USAGE)
+    .literal(clap_cargo::style::LITERAL)
+    .placeholder(clap_cargo::style::PLACEHOLDER)
+    .error(clap_cargo::style::ERROR)
+    .valid(clap_cargo::style::VALID)
+    .invalid(clap_cargo::style::INVALID);
+
 #[derive(Parser)]
-#[command(about, version, max_term_width = 80)]
+#[command(about, version, max_term_width = 80, styles = STYLES)]
 struct Cli {
     /// File(s) or command(s)
     #[arg(value_name = "STRING")]
@@ -108,11 +118,7 @@ fn main() -> Result<()> {
         );
 
         // Exit with the code of the last command
-        std::process::exit(if let Some(code) = results.last().unwrap().code {
-            code
-        } else {
-            1
-        });
+        std::process::exit(results.last().unwrap().code.unwrap_or(1));
     } else if no_arguments {
         // Watch, but no commands...
 
