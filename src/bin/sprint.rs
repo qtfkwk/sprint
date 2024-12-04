@@ -169,7 +169,7 @@ fn main() -> Result<()> {
                                 .collect::<Vec<_>>();
                             for path in paths {
                                 if let Some(h1) = hashes.get(&path) {
-                                    let h2 = fhc::file_blake3(&path).unwrap();
+                                    let h2 = hash(&path);
                                     if h2 != *h1 {
                                         // File changed...
 
@@ -270,7 +270,7 @@ fn main() -> Result<()> {
                                 .collect::<Vec<_>>();
                             for path in paths {
                                 if let Some(h1) = hashes.get(&path) {
-                                    let h2 = fhc::file_blake3(&path).unwrap();
+                                    let h2 = hash(&path);
                                     if h2 != *h1 {
                                         // File changed...
 
@@ -347,8 +347,8 @@ fn watched(args: &[PathBuf]) -> (Vec<PathBuf>, BTreeMap<PathBuf, String>) {
                 })
         }))
         .map(|x| {
-            let hash = fhc::file_blake3(&x).unwrap();
-            (x, hash)
+            let h = hash(&x);
+            (x, h)
         })
         .collect::<BTreeMap<_, _>>();
 
@@ -363,4 +363,8 @@ fn not_ignored(
 ) -> bool {
     let path = path.to_owned();
     !ignored.check(&path) && !dirs.contains(&path) && !hashes.contains_key(&path)
+}
+
+fn hash(path: &Path) -> String {
+    fhc::file_blake3(path).unwrap().remove(0).1
 }
