@@ -1,6 +1,6 @@
 [package]
 name = "sprint"
-version = "0.11.1"
+version = "0.11.2"
 edition = "2021"
 description = "Command runner"
 repository = "https://github.com/qtfkwk/sprint"
@@ -13,7 +13,7 @@ clap = { version = "4.5.22", features = ["derive", "wrap_help"] }
 clap-cargo = "0.14.1"
 fhc = "0.10.2"
 ignore = "0.4.23"
-ignore-check = "0.2.1"
+ignore-check = "0.2.2"
 notify = "7.0.0"
 owo-colors = "4.1.0"
 rayon = "1.10.0"

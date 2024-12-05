@@ -352,9 +352,9 @@ dependencies = [
 
 [[package]]
 name = "ignore-check"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a21539b04c81aaa17ef82a87bfcca4dc317014b2e9fe05554bd0868f575be9e"
+checksum = "c0c4a111982c821210fdebdec3eebd734607c6a80b3e764f643b02dd2be26589"
 dependencies = [
  "anyhow",
  "ignore",
@@ -621,7 +621,7 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
 name = "sprint"
-version = "0.11.1"
+version = "0.11.2"
 dependencies = [
  "anstream",
  "anyhow",
