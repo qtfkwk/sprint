@@ -21,6 +21,7 @@
 * 0.11.0 (2024-10-24): Add clap color; switch from owo-colors' support-colors feature to [`anstream`]; update dependencies
     * 0.11.1 (2024-12-04): Update dependencies
     * 0.11.2 (2024-12-04): Update dependencies
+    * 0.11.3 (2024-12-19): Fix starting fence for custom shells; update dependencies
 
 [`anstream`]: https://crates.io/crates/anstream
 [`bunt`]: https://crates.io/crates/bunt

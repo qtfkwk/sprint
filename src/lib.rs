@@ -472,7 +472,7 @@ impl Shell {
                 println!("{}", command.command.style(self.info_style));
                 println!("{s}");
                 self.print_fence(2);
-                self.print_fence(1);
+                self.print_fence(0);
                 println!("{}", self.info.style(self.info_style));
             }
         }
@@ -550,7 +550,6 @@ impl Shell {
         }
 
         self.print_fence(0);
-
         println!("{}", self.info.style(self.info_style));
         print!("{}", self.prompt.style(self.prompt_style));
 
