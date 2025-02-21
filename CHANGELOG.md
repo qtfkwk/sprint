@@ -22,6 +22,7 @@
     * 0.11.1 (2024-12-04): Update dependencies
     * 0.11.2 (2024-12-04): Update dependencies
     * 0.11.3 (2024-12-19): Fix starting fence for custom shells; update dependencies
+    * 0.11.4 (2025-02-21): Update dependencies
 
 [`anstream`]: https://crates.io/crates/anstream
 [`bunt`]: https://crates.io/crates/bunt
