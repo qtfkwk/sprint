@@ -1,11 +1,11 @@
 use {
     anstream::println,
     anyhow::Result,
-    clap::{builder::Styles, Parser},
+    clap::{Parser, builder::Styles},
     ignore_check::Ignore,
     notify::{
-        event::{AccessKind, AccessMode},
         Event, EventKind, RecursiveMode, Watcher,
+        event::{AccessKind, AccessMode},
     },
     sprint::*,
     std::{

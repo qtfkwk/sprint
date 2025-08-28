@@ -107,7 +107,7 @@ shell.run(&[Command::new("ls"), Command::new("ls -l")]);
 
 use {
     anstream::{print, println},
-    anyhow::{anyhow, Result},
+    anyhow::{Result, anyhow},
     clap::ValueEnum,
     owo_colors::{OwoColorize, Rgb, Style},
     rayon::prelude::*,
@@ -466,15 +466,15 @@ impl Shell {
             cmd.stderr(std::process::Stdio::piped());
         }
 
-        if self.print {
-            if let Pipe::String(Some(s)) = &command.stdin {
-                self.print_fence(0);
-                println!("{}", command.command.style(self.info_style));
-                println!("{s}");
-                self.print_fence(2);
-                self.print_fence(0);
-                println!("{}", self.info.style(self.info_style));
-            }
+        if self.print
+            && let Pipe::String(Some(s)) = &command.stdin
+        {
+            self.print_fence(0);
+            println!("{}", command.command.style(self.info_style));
+            println!("{s}");
+            self.print_fence(2);
+            self.print_fence(0);
+            println!("{}", self.info.style(self.info_style));
         }
 
         let mut child = cmd.spawn().unwrap();
@@ -510,10 +510,10 @@ impl Shell {
             r.stderr = Pipe::String(Some(stderr));
         }
 
-        if self.print {
-            if let Pipe::String(Some(_s)) = &command.stdin {
-                self.print_fence(2);
-            }
+        if self.print
+            && let Pipe::String(Some(_s)) = &command.stdin
+        {
+            self.print_fence(2);
         }
 
         r
