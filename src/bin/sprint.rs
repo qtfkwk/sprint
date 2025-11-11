@@ -1,7 +1,8 @@
 use {
     anstream::println,
     anyhow::Result,
-    clap::{Parser, builder::Styles},
+    clap::Parser,
+    clap_cargo::style::CLAP_STYLING,
     ignore_check::Ignore,
     notify::{
         Event, EventKind, RecursiveMode, Watcher,
@@ -16,17 +17,8 @@ use {
     },
 };
 
-const STYLES: Styles = Styles::styled()
-    .header(clap_cargo::style::HEADER)
-    .usage(clap_cargo::style::USAGE)
-    .literal(clap_cargo::style::LITERAL)
-    .placeholder(clap_cargo::style::PLACEHOLDER)
-    .error(clap_cargo::style::ERROR)
-    .valid(clap_cargo::style::VALID)
-    .invalid(clap_cargo::style::INVALID);
-
 #[derive(Parser)]
-#[command(about, version, max_term_width = 80, styles = STYLES)]
+#[command(about, version, max_term_width = 80, styles = CLAP_STYLING)]
 struct Cli {
     /// File(s) or command(s)
     #[arg(value_name = "STRING")]

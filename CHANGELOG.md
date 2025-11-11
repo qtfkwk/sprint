@@ -26,9 +26,11 @@
     * 0.11.5 (2025-04-16): Update dependencies
 * 0.12.0 (2025-08-28): Update dependencies; 2024 edition
     * 0.12.1 (2025-10-27): Update dependencies
+    * 0.12.2 (2025-11-11): Use [`clap-cargo`] `CLAP_STYLING`; update dependencies
 
 [`anstream`]: https://crates.io/crates/anstream
 [`bunt`]: https://crates.io/crates/bunt
+[`clap-cargo`]: https://crates.io/crates/clap-cargo
 [`ignore-check`]: https://crates.io/crates/ignore-check
 [`owo-colors`]: https://crates.io/crates/owo-colors
 [rain-rust-cli-colors]: https://rust-cli-recommendations.sunshowers.io/managing-colors-in-rust.html
