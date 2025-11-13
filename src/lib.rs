@@ -125,6 +125,7 @@ pub enum Pipe {
 }
 
 impl Pipe {
+    #[must_use]
     pub fn string() -> Pipe {
         Pipe::String(None)
     }
@@ -132,7 +133,13 @@ impl Pipe {
 
 //--------------------------------------------------------------------------------------------------
 
-/// Create a [`Style`] from a [`&str`] specification
+/**
+Create a [`Style`] from a [`&str`] specification
+
+# Errors
+
+Returns an error if not able to parse the given `&str` as a style specification
+*/
 pub fn style(s: &str) -> Result<Style> {
     let mut r = Style::new();
     for i in s.split('+') {
@@ -350,6 +357,7 @@ impl Default for Shell {
 
 impl Shell {
     /// Run command(s)
+    #[must_use]
     pub fn run(&self, commands: &[Command]) -> Vec<Command> {
         if self.sync {
             if self.print {
@@ -406,6 +414,7 @@ impl Shell {
     }
 
     /// Run a single command
+    #[must_use]
     pub fn run1(&self, command: &Command) -> Command {
         if self.print {
             if !self.dry_run {
@@ -431,6 +440,7 @@ impl Shell {
     }
 
     /// Pipe a single command
+    #[must_use]
     pub fn pipe1(&self, command: &str) -> String {
         let command = Command {
             command: command.to_string(),
@@ -441,13 +451,20 @@ impl Shell {
         let result = self.core(&command);
 
         if let Pipe::String(Some(stdout)) = &result.stdout {
-            stdout.to_string()
+            stdout.clone()
         } else {
             String::new()
         }
     }
 
-    /// Run a command in a child process
+    /**
+    Run a command in a child process
+
+    # Panics
+
+    Panics if not able to spawn the child process
+    */
+    #[must_use]
     pub fn run1_async(&self, command: &Command) -> std::process::Child {
         let (prog, args) = self.prepare(&command.command);
 
@@ -487,7 +504,14 @@ impl Shell {
         child
     }
 
-    /// Core part to run/pipe a command
+    /**
+    Core part to run/pipe a command
+
+    # Panics
+
+    Panics if not able to spawn the child process
+    */
+    #[must_use]
     pub fn core(&self, command: &Command) -> Command {
         let mut child = self.run1_async(command);
 
@@ -543,7 +567,13 @@ impl Shell {
         );
     }
 
-    /// Print the interactive prompt
+    /**
+    Print the interactive prompt
+
+    # Panics
+
+    Panics if not able to flush stdout
+    */
     pub fn interactive_prompt(&self, previous: bool) {
         if previous {
             self.print_fence(2);
@@ -558,13 +588,20 @@ impl Shell {
         std::io::stdout().flush().expect("flush");
     }
 
-    /// Clear the command style
+    /**
+    Clear the command style
+
+    # Panics
+
+    Panics if not able to flush stdout
+    */
     pub fn interactive_prompt_reset(&self) {
         print_suffix(self.command_style);
         std::io::stdout().flush().expect("flush");
     }
 
     /// Simpler interface to run command(s)
+    #[must_use]
     pub fn run_str(&self, commands: &[&str]) -> Vec<Command> {
         self.run(&commands.iter().map(|x| Command::new(x)).collect::<Vec<_>>())
     }
@@ -585,17 +622,18 @@ pub struct Command {
 impl Default for Command {
     fn default() -> Command {
         Command {
-            command: Default::default(),
+            command: String::default(),
             stdin: Pipe::Null,
             codes: vec![0],
             stdout: Pipe::Stdout,
             stderr: Pipe::Stderr,
-            code: Default::default(),
+            code: Option::default(),
         }
     }
 }
 
 impl Command {
+    #[must_use]
     pub fn new(command: &str) -> Command {
         Command {
             command: command.to_string(),

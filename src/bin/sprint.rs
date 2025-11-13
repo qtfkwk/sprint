@@ -8,7 +8,7 @@ use {
         Event, EventKind, RecursiveMode, Watcher,
         event::{AccessKind, AccessMode},
     },
-    sprint::*,
+    sprint::{ColorOverride, Command, Shell},
     std::{
         collections::BTreeMap,
         path::{Path, PathBuf},
@@ -53,6 +53,7 @@ struct Cli {
     color: ColorOverride,
 }
 
+#[allow(clippy::too_many_lines)]
 fn main() -> Result<()> {
     let cli = Cli::parse();
 

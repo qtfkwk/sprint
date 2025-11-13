@@ -6,7 +6,7 @@ fn default() {
 
     let shell = Shell::default();
 
-    shell.run(&[Command::new("ls *"), Command::new("ls -l")]);
+    let _ = shell.run(&[Command::new("ls *"), Command::new("ls -l")]);
 }
 
 #[test]
@@ -32,7 +32,7 @@ fn manual() {
         error_style: style("#ff0000+bold+italic").expect("style"),
     };
 
-    shell.run(&[Command::new("ls *"), Command::new("ls -l")]);
+    let _ = shell.run(&[Command::new("ls *"), Command::new("ls -l")]);
 }
 
 #[test]
@@ -58,7 +58,7 @@ fn custom() {
         error_style: style("#00ff00+bold+italic").expect("style"),
     };
 
-    shell.run(&[Command::new("ls *"), Command::new("ls -l")]);
+    let _ = shell.run(&[Command::new("ls *"), Command::new("ls -l")]);
 }
 
 #[test]
@@ -84,7 +84,7 @@ fn direct() {
         error_style: style("#ff0000+bold+italic").expect("style"),
     };
 
-    shell.run(&[
+    let _ = shell.run(&[
         Command {
             command: String::from("ls *"),
             codes: vec![2],
