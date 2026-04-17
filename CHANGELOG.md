@@ -29,6 +29,7 @@
     * 0.12.2 (2025-11-11): Use [`clap-cargo`] `CLAP_STYLING`; update dependencies
     * 0.12.3 (2025-11-13): Update dependencies; clippy fixes
     * 0.12.4 (2026-03-03): Update dependencies
+    * 0.12.5 (2026-04-17): Update dependencies
 
 [`anstream`]: https://crates.io/crates/anstream
 [`bunt`]: https://crates.io/crates/bunt
